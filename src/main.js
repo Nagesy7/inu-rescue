@@ -121,3 +121,6 @@ function render() {
   }
 }
 requestAnimationFrame(frame);
+// live rotation/resize: reset scroll, drop stuck touches
+const relayout = () => { scrollTo(0, 0); for (const id of [...ptrs.keys()]) setPtr(id, undefined); document.documentElement.dataset.orient = innerWidth > innerHeight ? 'landscape' : 'portrait'; };
+addEventListener('resize', relayout); addEventListener('orientationchange', relayout); screen.orientation?.addEventListener?.('change', relayout); relayout();
