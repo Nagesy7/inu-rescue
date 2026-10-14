@@ -117,7 +117,8 @@ export function drawGame(c, g, opts = {}) {
   text(c, `L${g.loop + 1}-${g.stage + 1} ${STAGES[g.stage].name}`, 253, 15, '#aaa', 'right', 6);
   if (g.mode === 'intro') { text(c, `STAGE ${g.loop * 4 + g.stage + 1}`, W / 2, 100, '#fff', 'center', 12); text(c, 'RESCUE THE PUP!', W / 2, 116, '#f0c840', 'center'); }
   if (g.mode === 'clear') text(c, 'STAGE CLEAR!', W / 2, 100, '#7ae07a', 'center', 14);
-  if (opts.paused) { R(c, 60, 92, 136, 40, '#000c'); text(c, 'PAUSED', W / 2, 98, '#fff', 'center', 14); text(c, 'P / ESC TO RESUME', W / 2, 116, '#aaa', 'center'); }
+  if (opts.paused) { R(c, 0, 0, W, H, '#0008'); R(c, 32, 84, W - 64, 56, '#000d'); text(c, 'PAUSED', W / 2, 92, '#fff', 'center', 16);
+    text(c, opts.paused === 'blur' ? (opts.touch ? 'TAP OR PRESS ANY KEY TO RESUME' : 'CLICK OR PRESS ANY KEY TO RESUME') : 'P / ESC TO RESUME', W / 2, 118, '#f0c840', 'center', 7); }
 }
 export function drawTitle(c, t, lb, describeFn, fmt) {
   if (!frame(c, 'background', 0, W, H, 0, 0)) { R(c, 0, 0, W, H, '#0c0c1e');

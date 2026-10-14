@@ -11,10 +11,16 @@ let lb = loadLB(localStorage);
 const app = { scene: 'title', g: null, paused: false, t: 0, entry: null, lastEntry: null };
 window.__inu = app; import("./render.js").then(m => Object.defineProperty(app, "heroFrame", { get: () => m.heroFrame }));
 
+// touch pad only on real touch devices; a desktop mouse never reaches PAUSE/START
+const root = document.documentElement;
+const hasTouch = () => ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+root.classList.toggle('notouch', !hasTouch());
+addEventListener('touchstart', () => root.classList.remove('notouch'), { once: true, passive: true });
 const keys = {}; let jumpEdge = false, startEdge = false;
 const KEYMAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down' };
 addEventListener('keydown', e => {
   initAudio();
+  if (app.paused === 'blur' && app.scene === 'game') { app.paused = false; e.preventDefault(); return; } // any key resumes after focus loss
   if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = true; e.preventDefault(); }
   if (e.code === 'Space' || e.code === 'KeyZ' || e.code === 'KeyX') { if (!e.repeat) jumpEdge = true; e.preventDefault(); }
   if (e.code === 'Enter') startEdge = true;
@@ -23,7 +29,10 @@ addEventListener('keydown', e => {
   if (app.scene === 'entry') entryKey(e.code);
 });
 addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = false; });
-addEventListener('blur', () => { if (app.scene === 'game') app.paused = true; });
+const autoPause = () => { if (app.scene === 'game' && !app.paused && app.g?.mode !== 'over') { app.paused = 'blur'; for (const k in keys) keys[k] = false; } };
+addEventListener('blur', autoPause);
+document.addEventListener('visibilitychange', () => { if (document.hidden) autoPause(); });
+cv.addEventListener('pointerdown', () => { if (app.paused === 'blur') app.paused = false; });
 // touch buttons: pad-level pointer tracking (multi-touch + sliding between buttons)
 const pad = document.getElementById('pad');
 const ptrs = new Map(); // pointerId -> key
@@ -45,6 +54,8 @@ function setPtr(id, k) {
   if (k) press(k);
 }
 pad.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'mouse') return; // mouse clicks never press pad buttons
+  if (app.paused === 'blur') { app.paused = false; e.preventDefault(); return; } // first tap just resumes
   const k = keyAt(e.clientX, e.clientY); if (!k) return;
   e.preventDefault(); try { pad.setPointerCapture(e.pointerId); } catch {}
   setPtr(e.pointerId, k);
@@ -64,23 +75,26 @@ for (const t of ['contextmenu', 'selectstart', 'dragstart', 'gesturestart', 'dbl
 addEventListener('blur', () => { for (const id of [...ptrs.keys()]) setPtr(id, undefined); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) for (const id of [...ptrs.keys()]) setPtr(id, undefined); });
 
-const LET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const LET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ', NAME_MAX = 8, BLANK = LET.length - 1;
 function entryKey(code) {
   const en = app.entry; if (!en) return;
-  if (code === 'ArrowUp' || code === 'KeyW') en.ch[en.i] = (en.ch[en.i] + 1) % LET.length;
-  else if (code === 'ArrowDown' || code === 'KeyS') en.ch[en.i] = (en.ch[en.i] + LET.length - 1) % LET.length;
+  const typed = /^Key([A-Z])$|^Digit([0-9])$/.exec(code);
+  if (typed) { en.ch[en.i] = LET.indexOf(typed[1] || typed[2]); en.i = Math.min(NAME_MAX - 1, en.i + 1); return; }
+  if (code === 'Backspace') { en.ch[en.i] = BLANK; en.i = Math.max(0, en.i - 1); return; }
+  if (code === 'ArrowUp') en.ch[en.i] = (en.ch[en.i] + 1) % LET.length;
+  else if (code === 'ArrowDown') en.ch[en.i] = (en.ch[en.i] + LET.length - 1) % LET.length;
   else if (code === 'ArrowLeft') en.i = Math.max(0, en.i - 1);
-  else if (code === 'ArrowRight') en.i = Math.min(2, en.i + 1);
+  else if (code === 'ArrowRight') en.i = Math.min(NAME_MAX - 1, en.i + 1);
   else if (code === 'Enter' || code === 'Space') {
-    if (en.i < 2) { en.i++; return; }
-    const e = makeEntry(en.ch.map(i => LET[i]).join(''), en.prog); lb = addEntry(lb, e); saveLB(localStorage, lb);
+    if (en.i < NAME_MAX - 1 && en.ch[en.i] !== BLANK) { en.i++; return; } // ENTER on a blank slot (or the 8th) finishes
+    const e = makeEntry(en.ch.map(i => LET[i]).join('').trim(), en.prog); lb = addEntry(lb, e); saveLB(localStorage, lb);
     app.lastEntry = e; app.entry = null; app.scene = 'over'; app.overT = 0;
   }
 }
 function newGame() { app.g = createGame({ seed: (Date.now() & 0xffff) || 7, stage: startStage }); app.scene = 'game'; app.paused = false; }
 function endGame() {
   const prog = progress(app.g); app.lastProg = prog;
-  if (qualifiesLB(lb, prog)) { app.scene = 'entry'; app.entry = { ch: [8, 13, 20], i: 0, prog }; }
+  if (qualifiesLB(lb, prog)) { app.scene = 'entry'; app.entry = { ch: [8, 13, 20].concat(Array(NAME_MAX - 3).fill(BLANK)), i: 0, prog }; }
   else { app.scene = 'over'; app.overT = 0; app.lastEntry = null; }
 }
 
@@ -102,7 +116,7 @@ function frame(now) {
 function render() {
   const hi = lb.reduce((m, e) => Math.max(m, e.score), 0);
   if (app.scene === 'title') return drawTitle(c, app.t, lb, describe, formatTime);
-  drawGame(c, app.g, { hi, paused: app.paused });
+  drawGame(c, app.g, { hi, paused: app.paused, touch: !root.classList.contains('notouch') });
   if (app.scene === 'entry' || app.scene === 'over') {
     c.fillStyle = '#000d'; c.fillRect(16, 48, W - 32, 150);
     text(c, 'GAME OVER', W / 2, 54, '#e05a6a', 'center', 16);
@@ -110,9 +124,9 @@ function render() {
     text(c, `score ${pr.score}`, W / 2, 86, '#ccc', 'center', 7);
     if (app.scene === 'entry') {
       text(c, 'NEW BEST RUN! ENTER INITIALS', W / 2, 102, '#7ae07a', 'center', 7);
-      app.entry.ch.forEach((ch, i) => { text(c, LET[ch], W / 2 - 20 + i * 20, 116, i === app.entry.i ? '#fff' : '#888', 'center', 16);
-        if (i === app.entry.i) { c.fillStyle = '#fff'; c.fillRect(W / 2 - 25 + i * 20, 134, 10, 1); } });
-      text(c, 'UP/DOWN letter  ENTER next', W / 2, 142, '#888', 'center', 6);
+      app.entry.ch.forEach((ch, i) => { const x = W / 2 - 3.5 * 22 + i * 22; text(c, ch === BLANK ? '_' : LET[ch], x, 116, i === app.entry.i ? '#fff' : '#888', 'center', 16);
+        if (i === app.entry.i) { c.fillStyle = '#fff'; c.fillRect(x - 5, 134, 10, 1); } });
+      text(c, 'TYPE or UP/DOWN  ENTER next  ENTER on _ = done', W / 2, 142, '#888', 'center', 6);
     } else {
       text(c, 'LEADERBOARD (progress, then time)', W / 2, 100, '#5ad0d8', 'center', 7);
       lb.slice(0, 8).forEach((e, i) => text(c, `${String(i + 1).padStart(2)} ${e.name} S${e.stage} H${String(e.height).padStart(3)} ${formatTime(e.timeMs)}`, 40, 112 + i * 10, e === app.lastEntry ? '#f0c840' : '#ccc', 'left', 7));

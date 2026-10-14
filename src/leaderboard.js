@@ -8,7 +8,7 @@ export function compareEntries(a, b) {
   return (b.stage - a.stage) || (b.height - a.height) || (a.timeMs - b.timeMs) || (b.score - a.score);
 }
 export function makeEntry(name, prog, date = new Date().toISOString()) {
-  return { name: String(name || 'INU').slice(0, 3).toUpperCase(), stage: prog.stage | 0, height: Math.max(0, Math.min(100, prog.height | 0)),
+  return { name: (String(name || '').trim().slice(0, 8).toUpperCase() || 'INU'), stage: prog.stage | 0, height: Math.max(0, Math.min(100, prog.height | 0)),
     timeMs: Math.max(0, Math.round(prog.timeMs)), score: prog.score | 0, date };
 }
 export function rankEntries(list, max = LB_MAX) { return list.slice().sort(compareEntries).slice(0, max); }

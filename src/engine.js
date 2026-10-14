@@ -1,7 +1,9 @@
 // Inu Rescue — pure game logic (no DOM). Runs in browser and in Node tests.
 export const W = 256, H = 240, DT = 1 / 60;
-export const PHYS = { walk: 54, climb: 38, jumpVy: -132, grav: 430, jumpVx: 54, maxDrop: 22, roll: 62, flea: 26 };
+export const PHYS = { walk: 54, climb: 38, jumpVy: -132, grav: 430, jumpVx: 54, maxDrop: 40, roll: 62, flea: 26 };
 
+// Roller speed: slower than walking (54px/s) on stage 1, ramping per stage and loop.
+export function rollSpeed(g) { return Math.min(PHYS.roll + 8 * g.loop, 40 + 7 * g.stage + 8 * g.loop); }
 export function mulberry32(a) {
   return function () { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -15,19 +17,19 @@ export const STAGES = [
     ladders: [{x:200,top:1,bot:0},{x:110,top:1,bot:0},{x:60,top:2,bot:1},{x:150,top:2,bot:1},{x:180,top:3,bot:2},{x:100,top:3,bot:2},
               {x:40,top:4,bot:3},{x:130,top:4,bot:3},{x:190,top:5,bot:4},{x:140,top:6,bot:5}],
     hammers: [{x:30,p:1},{x:216,p:3}], toys: [{x:230,p:2,k:'bow'},{x:70,p:4,k:'bag'}],
-    start: {x:40,p:0}, pup: {x:112,p:6}, cat: {x:24,p:5}, bowl: {x:14,p:0}, fleaMax: 4, rivets: [], shafts: [] },
+    start: {x:40,p:0}, checkpoint: {x:200,p:3}, pup: {x:112,p:6}, cat: {x:24,p:5}, bowl: {x:14,p:0}, fleaMax: 4, rivets: [], shafts: [] },
   { name: 'CONVEYORS', hazard: 'tin',
     plats: [P(0,232,256,232), P(8,196,248,196,{conv:1}), P(0,160,120,160,{conv:-1}), P(136,160,256,160,{conv:1}),
             P(8,124,248,124,{conv:-1}), P(0,88,256,88), P(96,52,160,52)],
     ladders: [{x:30,top:1,bot:0},{x:226,top:1,bot:0},{x:60,top:2,bot:1},{x:200,top:3,bot:1},{x:100,top:4,bot:2},{x:160,top:4,bot:3},
               {x:40,top:5,bot:4},{x:220,top:5,bot:4},{x:140,top:6,bot:5}],
     hammers: [{x:20,p:2},{x:236,p:3}], toys: [{x:128,p:5,k:'bow'},{x:236,p:0,k:'bag'}],
-    start: {x:120,p:0}, pup: {x:112,p:6}, cat: {x:40,p:5}, bowl: {x:128,p:0}, fleaMax: 3, rivets: [], shafts: [] },
+    start: {x:120,p:0}, checkpoint: {x:128,p:4}, pup: {x:112,p:6}, cat: {x:40,p:5}, bowl: {x:128,p:0}, fleaMax: 3, rivets: [], shafts: [] },
   { name: 'ELEVATORS', hazard: 'ball',
     plats: [P(0,232,256,232), P(0,196,40,196), P(68,112,146,112), P(180,140,256,140), P(180,98,256,98), P(72,56,256,56), P(0,56,40,56)],
     ladders: [{x:20,top:1,bot:0},{x:236,top:3,bot:0},{x:236,top:4,bot:3},{x:196,top:5,bot:4},{x:110,top:2,bot:0}],
     hammers: [{x:120,p:0}], toys: [{x:96,p:2,k:'bow'},{x:220,p:3,k:'bag'}],
-    start: {x:60,p:0}, pup: {x:132,p:5}, cat: {x:20,p:6}, bowl: {x:170,p:0}, fleaMax: 3, rivets: [],
+    start: {x:60,p:0}, checkpoint: {x:200,p:3}, pup: {x:132,p:5}, cat: {x:20,p:6}, bowl: {x:170,p:0}, fleaMax: 3, rivets: [],
     shafts: [{x1:40,x2:68,top:60,bot:236,dir:-1,speed:26,n:3},{x1:146,x2:178,top:60,bot:236,dir:1,speed:26,n:3}] },
   { name: 'RIVETS', hazard: 'none',
     plats: [P(0,232,256,232), P(16,196,240,196), P(24,160,232,160), P(32,124,224,124), P(40,88,216,88), P(56,52,200,52)],
@@ -69,7 +71,7 @@ export function addScore(g, n, x, y) {
   if (x !== undefined) g.popups.push({ x, y, text: String(n), t: 1 });
 }
 export function insertHighScore(table, name, score, max = 5) {
-  const t = table.concat([{ name: String(name).slice(0, 3).toUpperCase(), score }]);
+  const t = table.concat([{ name: String(name).slice(0, 8).toUpperCase(), score }]);
   t.sort((a, b) => b.score - a.score); return t.slice(0, max);
 }
 export function qualifies(table, score, max = 5) { return score > 0 && (table.length < max || score > table[table.length - 1].score); }
@@ -80,12 +82,13 @@ export function createGame(opts = {}) {
     mode: 'intro', timer: 1.5, events: [], popups: [], t: 0, runTime: 0, height: 0 };
   loadStage(g); return g;
 }
-export function loadStage(g) {
+export function loadStage(g, respawn = false) {
   const S = STAGES[g.stage];
-  g.height = 0;
+  if (!respawn) g.cp = false;
+  if (!respawn) g.height = 0;
   g.S = S; g.plats = S.plats.map(p => ({ ...p })); g.lifts = []; g.t = 0;
   g.bonus = 5000 + 1000 * Math.min(g.loop, 3); g.bonusClock = 0;
-  const st = S.start, pl = g.plats[st.p];
+  const st = g.cp && S.checkpoint ? S.checkpoint : S.start, pl = g.plats[st.p];
   g.player = { x: st.x, y: surfaceY(pl, st.x), vx: 0, vy: 0, state: 'walk', face: 1, anim: 0, jumpId: 0, takeoffY: 0, lad: null, hammer: 0 };
   g.hazards = []; g.fleas = []; g.spawnT = 1.2; g.fleaT = 3; g.convT = 0;
   g.hammers = S.hammers.map(h => ({ x: h.x, y: surfaceY(g.plats[h.p], h.x) - 14, taken: false }));
@@ -162,7 +165,7 @@ function spawnHazard(g) {
   const S = g.S, c = g.cat, lv = g.loop;
   if (S.hazard === 'yarn') {
     const kind = g.rng() < 0.3 ? 'kibble' : 'yarn';
-    g.hazards.push({ kind, x: c.x + 22, y: c.y, vx: PHYS.roll + lv * 8, vy: 0, state: 'roll', r: 5, rot: 0, jumpId: -1, tried: new Set() });
+    g.hazards.push({ kind, x: c.x + 22, y: c.y, vx: rollSpeed(g), vy: 0, state: 'roll', r: 5, rot: 0, jumpId: -1, tried: new Set() });
     c.throwT = 0.5; g.events.push('throw');
   } else if (S.hazard === 'tin') {
     const convs = g.plats.map((p, i) => i).filter(i => g.plats[i].conv);
@@ -183,7 +186,7 @@ export function stepHazard(g, b) {
     if (!gr) { b.state = 'fall'; b.vy = 0; return; }
     const pl = gr.pl;
     if (pl.conv) b.vx = pl.conv * 34;
-    else if (pl.y2 > pl.y1) b.vx = Math.abs(b.vx) || PHYS.roll; else if (pl.y2 < pl.y1) b.vx = -(Math.abs(b.vx) || PHYS.roll);
+    else if (pl.y2 > pl.y1) b.vx = Math.abs(b.vx) || rollSpeed(g); else if (pl.y2 < pl.y1) b.vx = -(Math.abs(b.vx) || rollSpeed(g));
     // maybe take a ladder down
     if (b.kind !== 'tin') for (const L of g.S.ladders) {
       if (g.plats[L.top] !== pl || b.tried.has(L) || Math.abs(L.x - b.x) > 1.6) continue;
@@ -277,9 +280,12 @@ function collisions(g) {
     }
     if (n) { addScore(g, n > 1 ? POINTS.multiJump : POINTS.jump, p.x, p.y - 20); g.events.push('score'); }
   }
+  // mid-tower checkpoint: standing on the checkpoint girder saves the respawn point
+  const cp = g.S.checkpoint;
+  if (cp && !g.cp && p.state === 'walk') { const gr = findGround(g, p.x, p.y, 2, 2); if (gr && gr.pl === g.plats[cp.p]) { g.cp = true; g.events.push('checkpoint'); g.popups.push({ x: p.x, y: p.y - 22, text: 'CHECKPOINT', t: 1.5 }); } }
   // stage clear
   if (g.S.rivets.length) { if (g.rivets.every(r => r.gone)) clearStage(g); }
-  else if (Math.abs(p.x - g.pup.x) < 12 && Math.abs(p.y - g.pup.y) < 6 && p.state === 'walk') clearStage(g);
+  else if (Math.abs(p.x - g.pup.x) < 20 && Math.abs(p.y - g.pup.y) < 10 && p.state !== 'dead') clearStage(g);
 }
 export function clearStage(g) {
   if (g.mode !== 'play') return;
@@ -300,7 +306,7 @@ export function step(g, inp = {}) {
   for (const pp of g.popups) pp.t -= DT; g.popups = g.popups.filter(pp => pp.t > 0);
   if (g.mode === 'intro') { g.timer -= DT; if (g.timer <= 0) { g.mode = 'play'; g.events.push('start'); } return; }
   if (g.mode === 'dying') {
-    g.timer -= DT; if (g.timer <= 0) { g.lives--; if (g.lives <= 0) { g.mode = 'over'; g.events.push('gameover'); } else { loadStage(g); g.mode = 'intro'; g.timer = 1.2; } }
+    g.timer -= DT; if (g.timer <= 0) { g.lives--; if (g.lives <= 0) { g.mode = 'over'; g.events.push('gameover'); } else { loadStage(g, true); g.mode = 'intro'; g.timer = 1.2; } }
     return;
   }
   if (g.mode === 'clear') {

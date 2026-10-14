@@ -10,9 +10,13 @@ test('jump arcs and lands back on same girder alive', () => {
   for (let i = 0; i < 60 && p.state === 'air'; i++) { E.step(g, {}); minY = Math.min(minY, p.y); }
   assert.equal(p.state, 'walk'); assert.equal(g.mode, 'play'); assert.ok(y0 - minY > 16 && y0 - minY < 26, `height ${y0 - minY}`);
 });
-test('falling further than max drop kills', () => {
+test('walking off a girder edge (one step down) is survivable', () => {
   const g = play(); const p = g.player; p.x = 230; p.y = E.surfaceY(g.plats[1], 230);
-  run(g, { right: true }, 60); assert.equal(g.mode, 'dying'); assert.equal(g.deathCause, 'fall');
+  run(g, { right: true }, 60); assert.equal(g.mode, 'play'); assert.equal(p.state, 'walk'); assert.ok(Math.abs(p.y - E.surfaceY(g.plats[0], p.x)) < 0.5);
+});
+test('falling further than max drop (about two girders) kills', () => {
+  const g = play(); const p = g.player; p.x = 248; p.y = E.surfaceY(g.plats[0], 248) - 60; p.state = 'air'; p.vy = 0; p.vx = 0; p.takeoffY = p.y;
+  run(g, {}, 60); assert.equal(g.mode, 'dying'); assert.equal(g.deathCause, 'fall');
 });
 test('walking follows sloped girder surface', () => {
   const g = play(); run(g, { right: true }, 90); const p = g.player;
@@ -91,4 +95,25 @@ test('leaderboard ranks by stage, then height, then fastest time', () => {
 test('progress tracks height and run time', () => {
   const g = play(); const p = g.player; p.x = 110; p.y = E.surfaceY(g.plats[0], 110); E.step(g, { up: true }); run(g, { up: true }, 120);
   const pr = E.progress(g); assert.equal(pr.stage, 1); assert.ok(pr.height > 10 && pr.height < 30); assert.ok(pr.timeMs > 2000);
+});
+
+test('stage-1 rollers are slower than walking; later stages ramp up', () => {
+  const g = play(); assert.ok(E.rollSpeed(g) <= 40 && E.rollSpeed(g) < E.PHYS.walk);
+  const s = [0, 1, 2, 3].map(stage => E.rollSpeed({ stage, loop: 0 })); for (let i = 1; i < 4; i++) assert.ok(s[i] > s[i - 1]);
+  assert.ok(E.rollSpeed({ stage: 0, loop: 1 }) > s[0]);
+  g.spawnT = 0; run(g, {}, 30); const b = g.hazards.find(h => h.state === 'roll'); assert.ok(b, 'a roller spawned'); assert.ok(Math.abs(b.vx) <= 40);
+});
+test('3 lives; mid-tower checkpoint is the respawn point and keeps height', () => {
+  const g = play(); assert.equal(g.lives, 3); const cp = g.S.checkpoint, p = g.player;
+  p.x = cp.x; p.y = E.surfaceY(g.plats[cp.p], cp.x); E.step(g, {}); assert.equal(g.cp, true);
+  const h = g.height; E.killPlayer(g, 'yarn'); run(g, {}, 100); assert.equal(g.lives, 2);
+  assert.equal(g.player.x, cp.x); assert.ok(Math.abs(g.player.y - E.surfaceY(g.plats[cp.p], cp.x)) < 0.01); assert.ok(g.height >= h);
+});
+test('wider pup trigger', () => {
+  const g = play(); const p = g.player; p.x = g.pup.x + 18; p.y = g.pup.y + 8; g.hazards = []; E.step(g, {}); assert.equal(g.mode, 'clear');
+});
+test('leaderboard names up to 8 characters', async () => {
+  const L = await import('../src/leaderboard.js');
+  assert.equal(L.makeEntry('playtester', { stage: 1, height: 0, timeMs: 0, score: 0 }).name, 'PLAYTEST');
+  assert.equal(L.makeEntry('zac  ', { stage: 1, height: 0, timeMs: 0, score: 0 }).name, 'ZAC');
 });
