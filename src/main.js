@@ -24,15 +24,45 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = false; });
 addEventListener('blur', () => { if (app.scene === 'game') app.paused = true; });
-// touch buttons
-document.querySelectorAll('[data-k]').forEach(b => {
-  const k = b.dataset.k;
-  const on = e => { e.preventDefault(); initAudio(); b.classList.add('on');
-    if (k === 'jump') jumpEdge = true; else if (k === 'start') { startEdge = true; if (app.scene === 'entry') entryKey('Enter'); }
-    else if (k === 'pause') { if (app.scene === 'game') app.paused = !app.paused; } else { keys[k] = true; if (app.scene === 'entry') entryKey({ left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown' }[k]); } };
-  const off = e => { e.preventDefault(); b.classList.remove('on'); if (keys[k] !== undefined) keys[k] = false; };
-  b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointerleave', off); b.addEventListener('pointercancel', off);
+// touch buttons: pad-level pointer tracking (multi-touch + sliding between buttons)
+const pad = document.getElementById('pad');
+const ptrs = new Map(); // pointerId -> key
+const held = k => [...ptrs.values()].includes(k); // value null = finger down but between buttons
+const btnOf = k => pad.querySelector(`[data-k="${k}"]`);
+function press(k) {
+  initAudio(); btnOf(k)?.classList.add('on');
+  if (k === 'jump') { jumpEdge = true; if (app.scene !== 'game') startEdge = true; }
+  else if (k === 'start') { startEdge = true; if (app.scene === 'entry') entryKey('Enter'); }
+  else if (k === 'pause') { if (app.scene === 'game') app.paused = !app.paused; }
+  else { keys[k] = true; if (app.scene === 'entry') entryKey({ left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown' }[k]); }
+}
+function release(k) { if (held(k)) return; btnOf(k)?.classList.remove('on'); if (k in keys) keys[k] = false; }
+function keyAt(x, y) { const el = document.elementFromPoint(x, y); return el?.closest?.('#pad [data-k]')?.dataset.k; }
+function setPtr(id, k) {
+  const prev = ptrs.get(id); if (prev === k) return;
+  if (k === undefined) ptrs.delete(id); else ptrs.set(id, k);
+  if (prev) release(prev);
+  if (k) press(k);
+}
+pad.addEventListener('pointerdown', e => {
+  const k = keyAt(e.clientX, e.clientY); if (!k) return;
+  e.preventDefault(); try { pad.setPointerCapture(e.pointerId); } catch {}
+  setPtr(e.pointerId, k);
 });
+pad.addEventListener('pointermove', e => {
+  if (!ptrs.has(e.pointerId)) return; e.preventDefault();
+  const k = keyAt(e.clientX, e.clientY);
+  if (k && !['start', 'pause'].includes(k) && k !== ptrs.get(e.pointerId)) setPtr(e.pointerId, k);
+  else if (!k) setPtr(e.pointerId, null); // keep tracking so sliding onto another button works
+});
+const up = e => { if (ptrs.has(e.pointerId)) { e.preventDefault(); setPtr(e.pointerId, undefined); } };
+for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(t, up);
+pad.addEventListener('pointerleave', e => { if (!pad.hasPointerCapture?.(e.pointerId)) up(e); });
+// block native touch gestures: selection, callout, double-tap zoom, scroll/bounce, pinch
+for (const t of ['touchstart', 'touchmove', 'touchend']) document.addEventListener(t, e => { if (e.cancelable && (e.target.closest?.('#pad, canvas') || t === 'touchmove' || e.touches.length > 1)) e.preventDefault(); }, { passive: false });
+for (const t of ['contextmenu', 'selectstart', 'dragstart', 'gesturestart', 'dblclick']) document.addEventListener(t, e => e.preventDefault());
+addEventListener('blur', () => { for (const id of [...ptrs.keys()]) setPtr(id, undefined); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) for (const id of [...ptrs.keys()]) setPtr(id, undefined); });
 
 const LET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 function entryKey(code) {

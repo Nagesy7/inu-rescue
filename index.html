@@ -2,9 +2,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Inu Rescue</title><link rel="stylesheet" href="style.css"></head><body>
 <main><canvas id="screen" width="256" height="240" aria-label="Inu Rescue game"></canvas>
-<div id="pad">
-  <div class="dpad"><button data-k="up">▲</button><div><button data-k="left">◀</button><button data-k="right">▶</button></div><button data-k="down">▼</button></div>
-  <div class="mid"><button data-k="start" class="sm">START</button><button data-k="pause" class="sm">PAUSE</button></div>
-  <div class="act"><button data-k="jump" class="big">JUMP</button></div>
+<div id="pad" aria-label="Touch controls">
+  <div class="dpad"><div data-k="up" class="btn ar up" role="button" aria-label="Up"></div><div data-k="left" class="btn ar left" role="button" aria-label="Left"></div><div data-k="right" class="btn ar right" role="button" aria-label="Right"></div><div data-k="down" class="btn ar down" role="button" aria-label="Down"></div></div>
+  <div class="mid"><div data-k="start" class="btn sm" role="button" aria-label="Start" data-t="START"></div><div data-k="pause" class="btn sm" role="button" aria-label="Pause" data-t="PAUSE"></div></div>
+  <div class="act"><div data-k="jump" class="btn big" role="button" aria-label="Jump" data-t="JUMP"></div></div>
 </div></main>
 <script type="module" src="src/main.js"></script></body></html>
