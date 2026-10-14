@@ -18,7 +18,8 @@ for (const [name, tag] of [['iPhone 13 landscape', 'iphone'], ['Pixel 7 landscap
   for (const k of ['up', 'down', 'left', 'right', 'jump', 'start', 'pause']) { const b = await box(k); ok(!inter(b, cv) && b.y + b.height <= vp.height && b.x + b.width <= vp.width, `${name}: ${k} on screen, not over play`); }
   await touch('touchStart', [await c('start')]); await p.waitForTimeout(80); await touch('touchEnd', []);
   for (let i = 0; i < 40 && (await st()).mode !== 'play'; i++) await p.waitForTimeout(100);
-  const a = await st(); const R = await c('right'); await touch('touchStart', [R]); await p.waitForTimeout(800); const b = await st();
+  const a = await st(); const R = await c('right'); await touch('touchStart', [R]); await p.waitForTimeout(800); const b = await st(); const runF = new Set(); for (let i = 0; i < 8; i++) { runF.add(await p.evaluate(() => window.__inu.heroFrame)); await p.waitForTimeout(30); }
+  ok([...runF].every(f => f >= 1 && f <= 4) && runF.size >= 2, `${name}: art run cycle frames ${[...runF]}`);
   ok(b.x > a.x + 20, `${name}: hold right moves ${a.x.toFixed(1)} -> ${b.x.toFixed(1)}`);
   await touch('touchMove', [R, { ...(await c('jump')), id: 1 }]); let up = 0;
   for (let i = 0; i < 6; i++) { await p.waitForTimeout(50); up = Math.max(up, b.y - (await st()).y); }
@@ -26,7 +27,7 @@ for (const [name, tag] of [['iPhone 13 landscape', 'iphone'], ['Pixel 7 landscap
   for (let i = 0; i < 60; i++) { const s = await st(); if (Math.abs(s.x - 110) < 2.5) break; const q = await c(s.x < 110 ? 'right' : 'left');
     await touch('touchStart', [q]); await p.waitForTimeout(Math.max(17, Math.min(120, Math.abs(s.x - 110) / 54 * 1000))); await touch('touchEnd', []); }
   const f0 = await st(); await touch('touchStart', [await c('up')]); await p.waitForTimeout(700); const f1 = await st(); await touch('touchEnd', []);
-  ok(f1.ps === 'climb' && f1.y < f0.y - 10, `${name}: up climbs ladder (${f1.ps}, y ${f0.y.toFixed(0)} -> ${f1.y.toFixed(0)})`);
+  ok((await p.evaluate(() => window.__inu.heroFrame)) === 6, `${name}: art climb frame`); ok(f1.ps === 'climb' && f1.y < f0.y - 10, `${name}: up climbs ladder (${f1.ps}, y ${f0.y.toFixed(0)} -> ${f1.y.toFixed(0)})`);
   await p.screenshot({ path: `proof/landscape-${tag}.png` });
   const sc = await p.evaluate(() => [scrollX, scrollY, document.scrollingElement.scrollHeight <= innerHeight]); ok(sc.join() === '0,0,true', `${name}: page does not scroll ${sc}`);
   // live rotation to portrait and back

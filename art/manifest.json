@@ -1,0 +1,468 @@
+{
+ "style": "Inu Verse (tan coat hero, cream pup, gray cat; outline #141016)",
+ "facing": "right; game flips for left",
+ "assets": [
+  {
+   "id": "background",
+   "file": "background.png",
+   "size": [
+    256,
+    240
+   ],
+   "frames": 1,
+   "frame_size": [
+    256,
+    240
+   ],
+   "replaces": "drawGame/drawTitle background fill + stars (W x H 256x240)"
+  },
+  {
+   "id": "bone",
+   "file": "bone.png",
+   "size": [
+    8,
+    8
+   ],
+   "frames": 1,
+   "frame_size": [
+    8,
+    8
+   ],
+   "replaces": "SPR.bone (hammer pickup)"
+  },
+  {
+   "id": "cat_idle",
+   "file": "cat_idle.png",
+   "size": [
+    36,
+    32
+   ],
+   "frames": 1,
+   "frame_size": [
+    36,
+    32
+   ],
+   "replaces": "render.js drawCat() throwing=false; draw at (cat.x-18, cat.y-32)"
+  },
+  {
+   "id": "cat_sheet",
+   "file": "cat_sheet.png",
+   "size": [
+    72,
+    32
+   ],
+   "frames": 2,
+   "frame_size": [
+    36,
+    32
+   ],
+   "replaces": "drawCat (idle, throw)"
+  },
+  {
+   "id": "cat_throw",
+   "file": "cat_throw.png",
+   "size": [
+    36,
+    32
+   ],
+   "frames": 1,
+   "frame_size": [
+    36,
+    32
+   ],
+   "replaces": "render.js drawCat() throwing=true; same anchor"
+  },
+  {
+   "id": "conveyor_sheet",
+   "file": "conveyor_sheet.png",
+   "size": [
+    32,
+    6
+   ],
+   "frames": 4,
+   "frame_size": [
+    8,
+    6
+   ],
+   "replaces": "drawPlat conveyor 8x6 tile, 4 scroll frames"
+  },
+  {
+   "id": "girder_0",
+   "file": "girder_0.png",
+   "size": [
+    8,
+    7
+   ],
+   "frames": 1,
+   "frame_size": [
+    8,
+    7
+   ],
+   "replaces": "drawPlat girder tile, THEMES[0]"
+  },
+  {
+   "id": "girder_1",
+   "file": "girder_1.png",
+   "size": [
+    8,
+    7
+   ],
+   "frames": 1,
+   "frame_size": [
+    8,
+    7
+   ],
+   "replaces": "drawPlat girder tile, THEMES[1]"
+  },
+  {
+   "id": "girder_2",
+   "file": "girder_2.png",
+   "size": [
+    8,
+    7
+   ],
+   "frames": 1,
+   "frame_size": [
+    8,
+    7
+   ],
+   "replaces": "drawPlat girder tile, THEMES[2]"
+  },
+  {
+   "id": "girder_3",
+   "file": "girder_3.png",
+   "size": [
+    8,
+    7
+   ],
+   "frames": 1,
+   "frame_size": [
+    8,
+    7
+   ],
+   "replaces": "drawPlat girder tile, THEMES[3]"
+  },
+  {
+   "id": "girder_sheet",
+   "file": "girder_sheet.png",
+   "size": [
+    32,
+    7
+   ],
+   "frames": 4,
+   "frame_size": [
+    8,
+    7
+   ],
+   "replaces": "drawPlat non-conveyor 8x7 tile, one per THEMES index 0-3"
+  },
+  {
+   "id": "hazard_ball",
+   "file": "hazard_ball.png",
+   "size": [
+    40,
+    10
+   ],
+   "frames": 4,
+   "frame_size": [
+    10,
+    10
+   ],
+   "replaces": "drawHazard kind 'ball'"
+  },
+  {
+   "id": "hazard_kibble",
+   "file": "hazard_kibble.png",
+   "size": [
+    40,
+    10
+   ],
+   "frames": 4,
+   "frame_size": [
+    10,
+    10
+   ],
+   "replaces": "drawHazard kind 'kibble'"
+  },
+  {
+   "id": "hazard_tin",
+   "file": "hazard_tin.png",
+   "size": [
+    40,
+    10
+   ],
+   "frames": 4,
+   "frame_size": [
+    10,
+    10
+   ],
+   "replaces": "drawHazard kind 'tin'"
+  },
+  {
+   "id": "hazard_yarn",
+   "file": "hazard_yarn.png",
+   "size": [
+    40,
+    10
+   ],
+   "frames": 4,
+   "frame_size": [
+    10,
+    10
+   ],
+   "replaces": "drawHazard kind 'yarn'; frame=floor(|rot|)%4; draw at (b.x-5, b.y-b.r-5)"
+  },
+  {
+   "id": "hero_climb",
+   "file": "hero_climb.png",
+   "size": [
+    12,
+    16
+   ],
+   "frames": 1,
+   "frame_size": [
+    12,
+    16
+   ],
+   "replaces": "SPR.inuClimb"
+  },
+  {
+   "id": "hero_hurt",
+   "file": "hero_hurt.png",
+   "size": [
+    12,
+    16
+   ],
+   "frames": 1,
+   "frame_size": [
+    12,
+    16
+   ],
+   "replaces": "SPR.inuDead"
+  },
+  {
+   "id": "hero_idle",
+   "file": "hero_idle.png",
+   "size": [
+    12,
+    16
+   ],
+   "frames": 1,
+   "frame_size": [
+    12,
+    16
+   ],
+   "replaces": "SPR.inuWalk1 (standing; also title vignette)"
+  },
+  {
+   "id": "hero_jump",
+   "file": "hero_jump.png",
+   "size": [
+    12,
+    16
+   ],
+   "frames": 1,
+   "frame_size": [
+    12,
+    16
+   ],
+   "replaces": "SPR.inuJump"
+  },
+  {
+   "id": "hero_run1",
+   "file": "hero_run1.png",
+   "size": [
+    12,
+    16
+   ],
+   "frames": 1,
+   "frame_size": [
+    12,
+    16
+   ],
+   "replaces": "SPR.inuWalk1"
+  },
+  {
+   "id": "hero_run2",
+   "file": "hero_run2.png",
+   "size": [
+    12,
+    16
+   ],
+   "frames": 1,
+   "frame_size": [
+    12,
+    16
+   ],
+   "replaces": "SPR.inuWalk2"
+  },
+  {
+   "id": "hero_run3",
+   "file": "hero_run3.png",
+   "size": [
+    12,
+    16
+   ],
+   "frames": 1,
+   "frame_size": [
+    12,
+    16
+   ],
+   "replaces": "SPR.inuWalk1 (new 4-frame cycle)"
+  },
+  {
+   "id": "hero_run4",
+   "file": "hero_run4.png",
+   "size": [
+    12,
+    16
+   ],
+   "frames": 1,
+   "frame_size": [
+    12,
+    16
+   ],
+   "replaces": "SPR.inuWalk2 (new 4-frame cycle)"
+  },
+  {
+   "id": "hero_sheet",
+   "file": "hero_sheet.png",
+   "size": [
+    108,
+    16
+   ],
+   "frames": 9,
+   "frame_size": [
+    12,
+    16
+   ],
+   "replaces": "SPR.inuWalk1/inuWalk2/inuJump/inuClimb/inuDead (sheet: idle,run1-4,jump,climb,hurt,win)"
+  },
+  {
+   "id": "hero_win",
+   "file": "hero_win.png",
+   "size": [
+    12,
+    16
+   ],
+   "frames": 1,
+   "frame_size": [
+    12,
+    16
+   ],
+   "replaces": "new (no current asset; stage clear)"
+  },
+  {
+   "id": "ladder_0",
+   "file": "ladder_0.png",
+   "size": [
+    10,
+    4
+   ],
+   "frames": 1,
+   "frame_size": [
+    10,
+    4
+   ],
+   "replaces": "ladder tile, THEMES[0]"
+  },
+  {
+   "id": "ladder_1",
+   "file": "ladder_1.png",
+   "size": [
+    10,
+    4
+   ],
+   "frames": 1,
+   "frame_size": [
+    10,
+    4
+   ],
+   "replaces": "ladder tile, THEMES[1]"
+  },
+  {
+   "id": "ladder_2",
+   "file": "ladder_2.png",
+   "size": [
+    10,
+    4
+   ],
+   "frames": 1,
+   "frame_size": [
+    10,
+    4
+   ],
+   "replaces": "ladder tile, THEMES[2]"
+  },
+  {
+   "id": "ladder_3",
+   "file": "ladder_3.png",
+   "size": [
+    10,
+    4
+   ],
+   "frames": 1,
+   "frame_size": [
+    10,
+    4
+   ],
+   "replaces": "ladder tile, THEMES[3]"
+  },
+  {
+   "id": "ladder_sheet",
+   "file": "ladder_sheet.png",
+   "size": [
+    40,
+    4
+   ],
+   "frames": 4,
+   "frame_size": [
+    10,
+    4
+   ],
+   "replaces": "ladder loop in drawGame: 10px wide, 4px rung period, one per THEMES index; draw at (L.x-5, y)"
+  },
+  {
+   "id": "pup",
+   "file": "pup.png",
+   "size": [
+    9,
+    10
+   ],
+   "frames": 1,
+   "frame_size": [
+    9,
+    10
+   ],
+   "replaces": "SPR.pup"
+  },
+  {
+   "id": "pup_cheer",
+   "file": "pup_cheer.png",
+   "size": [
+    9,
+    10
+   ],
+   "frames": 1,
+   "frame_size": [
+    9,
+    10
+   ],
+   "replaces": "SPR.pup during clear hop (new)"
+  },
+  {
+   "id": "pup_sheet",
+   "file": "pup_sheet.png",
+   "size": [
+    18,
+    10
+   ],
+   "frames": 2,
+   "frame_size": [
+    9,
+    10
+   ],
+   "replaces": "SPR.pup (pup, pup_cheer)"
+  }
+ ]
+}

@@ -9,7 +9,7 @@ const params = new URLSearchParams(location.search);
 const startStage = Math.max(0, Math.min(3, (parseInt(params.get('stage'), 10) || 1) - 1));
 let lb = loadLB(localStorage);
 const app = { scene: 'title', g: null, paused: false, t: 0, entry: null, lastEntry: null };
-window.__inu = app;
+window.__inu = app; import("./render.js").then(m => Object.defineProperty(app, "heroFrame", { get: () => m.heroFrame }));
 
 const keys = {}; let jumpEdge = false, startEdge = false;
 const KEYMAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down' };
