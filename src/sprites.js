@@ -106,8 +106,8 @@ export const SPR = {
     'kkrkkk',
     'kkkkkk',
     '.k..k.']),
-  bow: S(['m.....m','mmm.mmm','mmmymmm','mmm.mmm','m.....m']),
-  bag: S(['..kk..','.k..k.','uuuuuu','uyuuyu','uuuuuu','uuuuuu']),
+  bow: S(['..eee..','.eeweee','eeewwee','eeeewee','.eeeee.','..eee..']), // tennis ball
+  bag: S(['.yy...','yyyy.r','.yyyyy','..yyyy','..y..y']), // squeaky duck toy
   bone: S([   // bone mallet head + handle (vertical)
     'BB....BB',
     'BBBBBBBB',

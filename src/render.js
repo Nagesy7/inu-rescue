@@ -86,7 +86,7 @@ export function drawGame(c, g, opts = {}) {
   // pup + cat
   const pupHop = g.mode === 'clear' ? Math.abs(Math.sin(g.timer * 10)) * 4 : 0;
   if (!frame(c, 'pup_sheet', g.mode === 'clear' && pupHop > 1 ? 1 : 0, 9, 10, g.pup.x - 4, g.pup.y - 10 - pupHop, g.player.x < g.pup.x)) drawSprite(c, SPR.pup, g.pup.x - 4, g.pup.y - 10 - pupHop, g.player.x < g.pup.x);
-  if (g.mode === 'play' && Math.floor(t * 2) % 3 === 0) text(c, 'HELP!', g.pup.x + 6, g.pup.y - 20, '#f8a0c0', 'left', 6);
+  if (g.mode === 'play' && Math.floor(t * 2) % 3 === 0) text(c, 'YIP YIP!', g.pup.x + 6, g.pup.y - 20, '#f8a0c0', 'left', 6);
   if (g.mode === 'clear') text(c, '\u2665', g.pup.x - 3, g.pup.y - 24, '#ff5a7a', 'left', 10);
   drawCat(c, g.cat, g.cat.throwT > 0, t, g.cat.fallen);
   for (const b of g.hazards) drawHazard(c, b);
@@ -112,15 +112,16 @@ export function drawGame(c, g, opts = {}) {
     drawGear(c, lk, p.x, p.y, p.face, !!lk.shiba, p.state === 'climb'); }
   if (p.hammer > 0) { const up = Math.floor(t * 8) % 2 === 0; const z = hammerZone(p);
     if (!(p.hammer < 2 && Math.floor(t * 10) % 2)) {
-      if (up) { R(c, p.x + p.face * 3, p.y - 22, 2, 9, '#5a3a22'); R(c, p.x + p.face * 3 - 3, p.y - 26, 8, 5, '#e8dcc8'); }
-      else { R(c, p.x + p.face * 4, p.y - 11, p.face * 9, 2, '#5a3a22'); R(c, z.x - 2, z.y - 4, 5, 9, '#e8dcc8'); } } }
+      // squeaky bone held in the mouth + bark shockwave rings (no mallet)
+      R(c, p.x + p.face * 5 - 3, p.y - 13, 7, 2, '#f0e4cc'); R(c, p.x + p.face * 5 - 4, p.y - 14, 2, 4, '#f0e4cc'); R(c, p.x + p.face * 5 + 3, p.y - 14, 2, 4, '#f0e4cc');
+      c.strokeStyle = up ? '#f0c840' : '#ffe9a0'; c.lineWidth = 1; for (const rr of up ? [4, 8] : [6, 10]) { c.beginPath(); c.arc(z.x, z.y, rr, -1.1, 1.1); if (p.face < 0) { c.beginPath(); c.arc(z.x, z.y, rr, Math.PI - 1.1, Math.PI + 1.1); } c.stroke(); } } }
   for (const pp of g.popups) text(c, pp.text, pp.x, pp.y - (1 - pp.t) * 8, '#f0f070', 'center', 7);
   c.restore();
   // HUD
   R(c, 0, 0, W, 14, '#000a');
-  text(c, `1UP ${String(g.score).padStart(6, '0')}`, 3, 2, '#ff6a6a');
+  text(c, `P1 ${String(g.score).padStart(6, '0')}`, 3, 2, '#ff6a6a');
   text(c, `HI ${String(Math.max(opts.hi || 0, g.score)).padStart(6, '0')}`, 92, 2, '#fff');
-  text(c, `BONUS ${g.bonus}`, 253, 2, '#5ad0d8', 'right');
+  text(c, `TREATS ${g.bonus}`, 253, 2, '#5ad0d8', 'right');
   for (let i = 0; i < Math.max(0, g.lives - 1) && i < 5; i++) { R(c, 4 + i * 8, 16, 5, 4, '#d9893b'); R(c, 4 + i * 8, 15, 1, 1, '#d9893b'); R(c, 8 + i * 8, 15, 1, 1, '#d9893b'); }
   text(c, `L${g.loop + 1}-${g.stage + 1} ${STAGES[g.stage].name}`, 253, 15, '#aaa', 'right', 6);
   if (g.mode === 'intro') { text(c, `STAGE ${g.loop * 4 + g.stage + 1}`, W / 2, 100, '#fff', 'center', 12); text(c, 'RESCUE THE PUP!', W / 2, 116, '#f0c840', 'center'); }

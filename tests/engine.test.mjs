@@ -60,7 +60,7 @@ test('bone mallet pickup and smash scores', () => {
 test('reaching the pup clears stage with bonus and advances', () => {
   const g = play(); const p = g.player; p.x = g.pup.x + 8; p.y = g.pup.y; const b = g.bonus;
   E.step(g, {}); assert.equal(g.mode, 'clear'); assert.equal(g.score, b);
-  run(g, {}, 200); assert.equal(g.stage, 1); assert.equal(g.S.name, 'CONVEYORS');
+  run(g, {}, 200); assert.equal(g.stage, 1); assert.equal(g.S.name, 'KIBBLE WORKS');
 });
 test('rivet stage clears when all rivets pulled', () => {
   const g = play({ stage: 3 }); const p = g.player;
@@ -116,4 +116,9 @@ test('leaderboard names up to 8 characters', async () => {
   const L = await import('../src/leaderboard.js');
   assert.equal(L.makeEntry('playtester', { stage: 1, height: 0, timeMs: 0, score: 0 }).name, 'PLAYTEST');
   assert.equal(L.makeEntry('zac  ', { stage: 1, height: 0, timeMs: 0, score: 0 }).name, 'ZAC');
+});
+
+test('IP: stage names are original (no arcade-classic stage names)', () => {
+  const names = E.STAGES.map(s => s.name);
+  for (const b of ['GIRDERS', 'CONVEYORS', 'ELEVATORS', 'RIVETS']) assert.ok(!names.includes(b), b);
 });
