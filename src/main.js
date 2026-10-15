@@ -116,6 +116,9 @@ function endGame() {
   else { app.scene = 'over'; app.overT = 0; app.lastEntry = null; }
 }
 
+// haptics on touch phones (no-op elsewhere)
+const BUZZ = { die: [60, 40, 90], clear: [30, 30, 30, 30, 60], hammer: 25, extralife: [20, 20, 20] };
+function buzz(ev) { if (BUZZ[ev] && !isMuted() && !root.classList.contains('notouch')) try { navigator.vibrate?.(BUZZ[ev]); } catch {} }
 let acc = 0, last = performance.now();
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now; app.t += dt;
@@ -124,7 +127,7 @@ function frame(now) {
     acc += dt;
     while (acc >= 1 / 60) { acc -= 1 / 60;
       step(app.g, { ...keys, jump: jumpEdge }); jumpEdge = false;
-      for (const ev of app.g.events) play(ev);
+      for (const ev of app.g.events) { play(ev); buzz(ev); }
       if (app.g.mode === 'over') { endGame(); break; } }
   } else if (app.scene === 'over') { app.overT += dt; if (app.overT > 1 && (startEdge || jumpEdge)) app.scene = 'title'; }
   else acc = 0;
@@ -133,7 +136,7 @@ function frame(now) {
 }
 function render() {
   const hi = lb.reduce((m, e) => Math.max(m, e.score), 0);
-  if (app.scene === 'title') return drawTitle(c, app.t, lb, describe, formatTime, lookNow);
+  if (app.scene === 'title') return drawTitle(c, app.t, lb, describe, formatTime, lookNow, !root.classList.contains('notouch'));
   drawGame(c, app.g, { hi, paused: app.paused, touch: !root.classList.contains('notouch'), look: lookNow });
   if (app.scene === 'entry' || app.scene === 'over') {
     c.fillStyle = '#000d'; c.fillRect(16, 48, W - 32, 150);

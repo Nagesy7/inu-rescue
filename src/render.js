@@ -60,6 +60,9 @@ function drawHazard(c, b) {
 }
 export function drawGame(c, g, opts = {}) {
   const t = g.t, th = THEMES[g.stage % 4];
+  // death shake: short screen jolt so a hit reads clearly on a small phone screen
+  const shk = g.mode === 'dying' && g.timer > 1.3 ? Math.round(Math.sin(g.timer * 90) * 2) : 0;
+  c.save(); if (shk) c.translate(shk, 0);
   if (!frame(c, 'background', 0, W, H, 0, 0)) { R(c, 0, 0, W, H, '#0c0c1e');
   for (let i = 0; i < 30; i++) R(c, (i * 97) % W, 20 + (i * 53) % 200, 1, 1, '#2a2a4a'); }
   // ladders
@@ -112,6 +115,7 @@ export function drawGame(c, g, opts = {}) {
       if (up) { R(c, p.x + p.face * 3, p.y - 22, 2, 9, '#5a3a22'); R(c, p.x + p.face * 3 - 3, p.y - 26, 8, 5, '#e8dcc8'); }
       else { R(c, p.x + p.face * 4, p.y - 11, p.face * 9, 2, '#5a3a22'); R(c, z.x - 2, z.y - 4, 5, 9, '#e8dcc8'); } } }
   for (const pp of g.popups) text(c, pp.text, pp.x, pp.y - (1 - pp.t) * 8, '#f0f070', 'center', 7);
+  c.restore();
   // HUD
   R(c, 0, 0, W, 14, '#000a');
   text(c, `1UP ${String(g.score).padStart(6, '0')}`, 3, 2, '#ff6a6a');
@@ -120,9 +124,9 @@ export function drawGame(c, g, opts = {}) {
   for (let i = 0; i < Math.max(0, g.lives - 1) && i < 5; i++) { R(c, 4 + i * 8, 16, 5, 4, '#d9893b'); R(c, 4 + i * 8, 15, 1, 1, '#d9893b'); R(c, 8 + i * 8, 15, 1, 1, '#d9893b'); }
   text(c, `L${g.loop + 1}-${g.stage + 1} ${STAGES[g.stage].name}`, 253, 15, '#aaa', 'right', 6);
   if (g.mode === 'intro') { text(c, `STAGE ${g.loop * 4 + g.stage + 1}`, W / 2, 100, '#fff', 'center', 12); text(c, 'RESCUE THE PUP!', W / 2, 116, '#f0c840', 'center'); }
-  if (g.mode === 'clear') text(c, 'STAGE CLEAR!', W / 2, 100, '#7ae07a', 'center', 14);
+  if (g.mode === 'clear') { text(c, 'STAGE CLEAR!', W / 2, 100, '#7ae07a', 'center', 14); text(c, `PUP SAVED!  x${g.saved || 1}`, W / 2, 118, '#ff8aa0', 'center', 8); }
   if (opts.paused) { R(c, 0, 0, W, H, '#0008'); R(c, 32, 84, W - 64, 56, '#000d'); text(c, 'PAUSED', W / 2, 92, '#fff', 'center', 16);
-    text(c, opts.paused === 'blur' ? (opts.touch ? 'TAP OR PRESS ANY KEY TO RESUME' : 'CLICK OR PRESS ANY KEY TO RESUME') : 'P / ESC TO RESUME', W / 2, 118, '#f0c840', 'center', 7); }
+    text(c, opts.paused === 'blur' ? (opts.touch ? 'TAP OR PRESS ANY KEY TO RESUME' : 'CLICK OR PRESS ANY KEY TO RESUME') : (opts.touch ? 'TAP PAUSE TO RESUME' : 'P / ESC TO RESUME'), W / 2, 118, '#f0c840', 'center', 7); }
 }
 // cosmetic overlays (collar / gear) on the rescuer: pure pixels, no gameplay effect. Shared Shiba is 18x22, hero art 12x16.
 export function drawGear(c, lk, x, y, face = 1, shiba = false, back = false) {
@@ -137,7 +141,7 @@ export function drawVan(c, x, y, col) { // rescue van skin (title screen garage)
   R(c, x + 4, y - 11, 14, 2, '#fff'); R(c, x + 10, y - 13, 2, 6, '#fff'); R(c, x + 6, y - 2, 6, 4, '#222'); R(c, x + 24, y - 2, 6, 4, '#222');
   R(c, x + 20, y - 22, 3, 2, Math.floor(Date.now() / 300) % 2 ? '#ff3a3a' : '#3a7aff');
 }
-export function drawTitle(c, t, lb, describeFn, fmt, lk = {}) {
+export function drawTitle(c, t, lb, describeFn, fmt, lk = {}, touch = false) {
   if (!frame(c, 'background', 0, W, H, 0, 0)) { R(c, 0, 0, W, H, '#0c0c1e');
   for (let i = 0; i < 40; i++) R(c, (i * 97) % W, (i * 53) % H, 1, 1, '#2a2a4a'); }
   const bob = Math.round(Math.sin(t * 3) * 2);
@@ -158,7 +162,7 @@ export function drawTitle(c, t, lb, describeFn, fmt, lk = {}) {
   if (!lb.length) text(c, 'no runs yet', W / 2, 146, '#777', 'center', 7);
   lb.slice(0, 5).forEach((e, i) => text(c, `${i + 1}. ${e.name} S${e.stage} H${String(e.height).padStart(3)} ${fmt(e.timeMs)}`, 34, 144 + i * 10, i ? '#ccc' : '#f0c840', 'left', 7));
   if (Math.floor(t * 2) % 2 === 0) text(c, 'PRESS ENTER / TAP START', W / 2, 202, '#fff', 'center');
-  text(c, 'ARROWS/WASD move  SPACE jump  P pause', W / 2, 216, '#888', 'center', 6);
+  text(c, touch ? 'TAP JUMP TO START  D-PAD move  JUMP jump' : 'ARROWS/WASD move  SPACE jump  P pause', W / 2, 216, '#888', 'center', 6);
   text(c, 'original fan-made arcade homage', W / 2, 228, '#555', 'center', 6);
 }
 
