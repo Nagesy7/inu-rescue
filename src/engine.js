@@ -289,11 +289,11 @@ function collisions(g) {
 }
 export function clearStage(g) {
   if (g.mode !== 'play') return;
-  addScore(g, g.bonus, g.player.x, g.player.y - 24); g.height = 100; g.mode = 'clear'; g.timer = 2.5; g.cat.fallen = !!g.S.rivets.length; g.events.push('clear');
+  addScore(g, g.bonus, g.player.x, g.player.y - 24); g.saved = (g.saved || 0) + 1; g.height = 100; g.mode = 'clear'; g.timer = 2.5; g.cat.fallen = !!g.S.rivets.length; g.events.push('clear');
 }
 
 export function progress(g) {
-  return { stage: g.loop * STAGES.length + g.stage + 1, height: Math.floor(g.height), timeMs: Math.round(g.runTime), score: g.score };
+  return { stage: g.loop * STAGES.length + g.stage + 1, height: Math.floor(g.height), timeMs: Math.round(g.runTime), score: g.score, saved: g.saved || 0 };
 }
 function trackHeight(g) {
   const sy = surfaceY(g.plats[g.S.start.p], g.S.start.x), gy = g.pup.y;

@@ -1,6 +1,7 @@
 import { createGame, step, progress, W, H } from './engine.js';
 import { drawGame, drawTitle, text } from './render.js';
 import { initAudio, play, setMuted, isMuted } from './audio.js';
+import * as KB from './kibble.js';
 import { loadLB, saveLB, addEntry, makeEntry, qualifiesLB, describe, formatTime } from './leaderboard.js';
 
 const cv = document.getElementById('screen'), c = cv.getContext('2d');
@@ -91,9 +92,26 @@ function entryKey(code) {
     app.lastEntry = e; app.entry = null; app.scene = 'over'; app.overT = 0;
   }
 }
+// ---- $KIBBLE bar (wallet sign-in + shared shop). DOM, outside the canvas; phone-landscape safe (top-left corner) ----
+const kbar = document.getElementById('kbar'), kwal = document.getElementById('k-wallet'), kmsg = document.getElementById('k-msg');
+let lookNow = {};
+const relook = () => { lookNow = KB.look(); app.look = lookNow; };
+function kbarUi(msg) {
+  const m = KB.K.mode; document.documentElement.dataset.kibble = m;
+  kwal.textContent = m === 'demo' ? 'DEMO' : KB.K.address ? KB.K.address.slice(0, 4) + '…' + KB.K.address.slice(-4) : 'Sign in';
+  if (msg !== undefined) { kmsg.textContent = msg; clearTimeout(kbarUi.t); kbarUi.t = setTimeout(() => (kmsg.textContent = ''), 5000); }
+  relook();
+}
+kwal.onclick = async () => { if (KB.K.mode === 'demo') return kbarUi('Demo mode: fake KIBBLE. Remove ?demo=1 to use Phantom.');
+  try { await KB.signIn(); kbarUi('Signed in: runs that save a pup post to the prize board.'); } catch (e) { kbarUi(e.message || 'Sign-in failed'); } };
+document.getElementById('k-shop').onclick = () => { app.paused = app.scene === 'game' ? true : app.paused; KB.openShop(() => kbarUi()); };
+for (const t of ['pointerdown', 'touchstart']) kbar.addEventListener(t, (e) => e.stopPropagation(), { passive: true });
+kbar.addEventListener('click', () => setTimeout(() => document.activeElement?.blur?.(), 0));
+KB.initKibble({ onChange: () => kbarUi() }); kbarUi();
+async function postRun(prog) { const r = await KB.postRun(prog); app.posted = r.skipped ? null : r.ok ? `POSTED ${KB.runScore(prog)} TO PRIZE BOARD` : 'SCORE NOT POSTED: ' + String(r.reason || r.error || '').slice(0, 28).toUpperCase(); }
 function newGame() { app.g = createGame({ seed: (Date.now() & 0xffff) || 7, stage: startStage }); app.scene = 'game'; app.paused = false; }
 function endGame() {
-  const prog = progress(app.g); app.lastProg = prog;
+  const prog = progress(app.g); app.lastProg = prog; app.posted = null; postRun(prog);
   if (qualifiesLB(lb, prog)) { app.scene = 'entry'; app.entry = { ch: [8, 13, 20].concat(Array(NAME_MAX - 3).fill(BLANK)), i: 0, prog }; }
   else { app.scene = 'over'; app.overT = 0; app.lastEntry = null; }
 }
@@ -115,13 +133,14 @@ function frame(now) {
 }
 function render() {
   const hi = lb.reduce((m, e) => Math.max(m, e.score), 0);
-  if (app.scene === 'title') return drawTitle(c, app.t, lb, describe, formatTime);
-  drawGame(c, app.g, { hi, paused: app.paused, touch: !root.classList.contains('notouch') });
+  if (app.scene === 'title') return drawTitle(c, app.t, lb, describe, formatTime, lookNow);
+  drawGame(c, app.g, { hi, paused: app.paused, touch: !root.classList.contains('notouch'), look: lookNow });
   if (app.scene === 'entry' || app.scene === 'over') {
     c.fillStyle = '#000d'; c.fillRect(16, 48, W - 32, 150);
     text(c, 'GAME OVER', W / 2, 54, '#e05a6a', 'center', 16);
     const pr = app.lastProg; text(c, describe(pr), W / 2, 76, '#f0c840', 'center', 7);
-    text(c, `score ${pr.score}`, W / 2, 86, '#ccc', 'center', 7);
+    text(c, `score ${pr.score}  pups saved ${pr.saved || 0}`, W / 2, 86, '#ccc', 'center', 7);
+    if (app.posted) text(c, app.posted, W / 2, 93, '#7ae07a', 'center', 6);
     if (app.scene === 'entry') {
       text(c, 'NEW BEST RUN! ENTER INITIALS', W / 2, 102, '#7ae07a', 'center', 7);
       app.entry.ch.forEach((ch, i) => { const x = W / 2 - 3.5 * 22 + i * 22; text(c, ch === BLANK ? '_' : LET[ch], x, 116, i === app.entry.i ? '#fff' : '#888', 'center', 16);

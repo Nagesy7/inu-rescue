@@ -102,7 +102,11 @@ export function drawGame(c, g, opts = {}) {
   else if (p.state === 'climb') { hf = HERO.climb; hflip = Math.floor(p.anim * 6) % 2 === 1; }
   else if (p.state === 'air') hf = HERO.jump; else if (moving) hf = HERO.run[Math.floor(p.anim * 10) % 4];
   heroFrame = hf;
-  if (!(g.mode === 'intro' && Math.floor(g.timer * 8) % 2)) { if (!frame(c, 'hero_sheet', hf, 12, 16, p.x - 6, p.y - 16, hflip)) drawSprite(c, spr, p.x - 6, p.y - 16, flip); }
+  const lk = opts.look || {};
+  if (!(g.mode === 'intro' && Math.floor(g.timer * 8) % 2)) {
+    if (lk.shiba) lk.shiba.draw(c, p.x, p.y, { scale: 0.5, shadow: false, face: p.state === 'climb' ? 'up' : p.face < 0 ? 'left' : 'right', frame: moving || p.state === 'climb' ? Math.floor(p.anim * 10) % 4 : 0 });
+    else if (!frame(c, 'hero_sheet', hf, 12, 16, p.x - 6, p.y - 16, hflip)) drawSprite(c, spr, p.x - 6, p.y - 16, flip);
+    drawGear(c, lk, p.x, p.y, p.face, !!lk.shiba, p.state === 'climb'); }
   if (p.hammer > 0) { const up = Math.floor(t * 8) % 2 === 0; const z = hammerZone(p);
     if (!(p.hammer < 2 && Math.floor(t * 10) % 2)) {
       if (up) { R(c, p.x + p.face * 3, p.y - 22, 2, 9, '#5a3a22'); R(c, p.x + p.face * 3 - 3, p.y - 26, 8, 5, '#e8dcc8'); }
@@ -120,7 +124,20 @@ export function drawGame(c, g, opts = {}) {
   if (opts.paused) { R(c, 0, 0, W, H, '#0008'); R(c, 32, 84, W - 64, 56, '#000d'); text(c, 'PAUSED', W / 2, 92, '#fff', 'center', 16);
     text(c, opts.paused === 'blur' ? (opts.touch ? 'TAP OR PRESS ANY KEY TO RESUME' : 'CLICK OR PRESS ANY KEY TO RESUME') : 'P / ESC TO RESUME', W / 2, 118, '#f0c840', 'center', 7); }
 }
-export function drawTitle(c, t, lb, describeFn, fmt) {
+// cosmetic overlays (collar / gear) on the rescuer: pure pixels, no gameplay effect. Shared Shiba is 18x22, hero art 12x16.
+export function drawGear(c, lk, x, y, face = 1, shiba = false, back = false) {
+  const top = y - (shiba ? 20 : 16), neck = y - (shiba ? 11 : 10);
+  if (lk.gear?.id === 'gear-cape') R(c, x - face * (shiba ? 6 : 5) - 1, neck, 2, 8, lk.gear.color);
+  if (lk.gear?.id === 'gear-hivis') { R(c, x - 3, neck + 1, 6, 3, lk.gear.color); R(c, x - 3, neck + 2, 6, 1, '#c0c0c0'); }
+  if (lk.collar && !back) R(c, x - 3, neck, 6, 1, lk.collar.color);
+  if (lk.gear?.id === 'gear-helmet') { R(c, x - 4, top, 8, 2, lk.gear.color); R(c, x - 5, top + 2, 10, 1, lk.gear.color); }
+}
+export function drawVan(c, x, y, col) { // rescue van skin (title screen garage)
+  R(c, x, y - 14, 34, 12, col); R(c, x + 22, y - 20, 12, 7, col); R(c, x + 24, y - 18, 8, 4, '#bfe8ff');
+  R(c, x + 4, y - 11, 14, 2, '#fff'); R(c, x + 10, y - 13, 2, 6, '#fff'); R(c, x + 6, y - 2, 6, 4, '#222'); R(c, x + 24, y - 2, 6, 4, '#222');
+  R(c, x + 20, y - 22, 3, 2, Math.floor(Date.now() / 300) % 2 ? '#ff3a3a' : '#3a7aff');
+}
+export function drawTitle(c, t, lb, describeFn, fmt, lk = {}) {
   if (!frame(c, 'background', 0, W, H, 0, 0)) { R(c, 0, 0, W, H, '#0c0c1e');
   for (let i = 0; i < 40; i++) R(c, (i * 97) % W, (i * 53) % H, 1, 1, '#2a2a4a'); }
   const bob = Math.round(Math.sin(t * 3) * 2);
@@ -130,7 +147,11 @@ export function drawTitle(c, t, lb, describeFn, fmt) {
   R(c, 20, 104, 216, 7, '#e05a6a'); R(c, 20, 105, 216, 1, '#8a2838');
   drawCat(c, { x: 60, y: 104 }, Math.floor(t * 2) % 2, t, false);
   if (!frame(c, 'pup_sheet', Math.floor(t * 2) % 2, 9, 10, 110, 94)) drawSprite(c, SPR.pup, 110, 94);
-  if (!frame(c, 'hero_sheet', HERO.run[Math.floor(t * 8) % 4], 12, 16, 180, 88, true)) drawSprite(c, SPR.inuWalk1, 180, 88, true);
+  if (lk.shiba) lk.shiba.draw(c, 186, 104, { scale: 0.5, shadow: false, face: 'left', frame: Math.floor(t * 8) % 4 });
+  else if (!frame(c, 'hero_sheet', HERO.run[Math.floor(t * 8) % 4], 12, 16, 180, 88, true)) drawSprite(c, SPR.inuWalk1, 180, 88, true);
+  drawGear(c, lk, 186, 104, -1, !!lk.shiba);
+  if (lk.van) drawVan(c, 200, 104, lk.van.color);
+  if (lk.shiba) text(c, 'RESCUER: ' + String(lk.shiba.profile?.name || 'SHIBA').toUpperCase().slice(0, 12), W / 2, 70, '#7ae07a', 'center', 7);
   drawHazard(c, { kind: 'yarn', x: 140 + (t * 30) % 30, y: 104, r: 5, rot: t * 8 });
   text(c, 'A grumpy cat stole the pup!', W / 2, 118, '#ddd', 'center', 7);
   text(c, 'TOP RESCUERS', W / 2, 132, '#5ad0d8', 'center');

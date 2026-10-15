@@ -1,10 +1,12 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Inu Rescue</title><link rel="icon" type="image/png" href="favicon.png"><link rel="stylesheet" href="style.css"></head><body>
+<div id="kbar"><button id="k-wallet">Sign in</button><button id="k-shop">Shop</button><span id="k-msg"></span></div>
 <main><canvas id="screen" width="256" height="240" aria-label="Inu Rescue game"></canvas>
 <div id="pad" aria-label="Touch controls">
   <div class="dpad"><div data-k="up" class="btn ar up" role="button" aria-label="Up"></div><div data-k="left" class="btn ar left" role="button" aria-label="Left"></div><div data-k="right" class="btn ar right" role="button" aria-label="Right"></div><div data-k="down" class="btn ar down" role="button" aria-label="Down"></div></div>
   <div class="mid"><div data-k="start" class="btn sm" role="button" aria-label="Start" data-t="START"></div><div data-k="pause" class="btn sm" role="button" aria-label="Pause" data-t="PAUSE"></div></div>
   <div class="act"><div data-k="jump" class="btn big" role="button" aria-label="Jump" data-t="JUMP"></div></div>
 </div></main>
+<script type="importmap">{"imports":{"@solana/web3.js":"https://esm.sh/@solana/web3.js@1.98.4"}}</script>
 <script type="module" src="src/main.js"></script></body></html>
