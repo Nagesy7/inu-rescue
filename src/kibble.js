@@ -1,9 +1,9 @@
-// $KIBBLE hooks for Inu Rescue. Real kibble-pay by default ("KIBBLE launching soon" until the mint is set);
+// $KIBBLE hooks for Inu Rescue. Real kibble-pay by default ($KIBBLE is live);
 // fake balance + local inventory ONLY with ?demo=1. Cosmetics are visual only (no gameplay advantage).
 // v2 = remixed stages; kibble-pay keeps v2 scores on their own board (inu-rescue@v2) and rejects untagged/old clients
 export const SCORE_VERSION = 2;
 export const GAME = 'inu-rescue', API = 'https://kibble-pay.vercel.app';
-export const SOON_MSG = 'KIBBLE launching soon: purchases open at launch.';
+export const SOON_MSG = 'KIBBLE is live, but the wallet service is unreachable right now. Try again shortly.';
 // Catalog source for kibble-pay `npm run catalog`. Prices are FEE-INCLUSIVE (player pays exactly this).
 export const COSMETICS = {
   'collar-red':    { name: 'Red Rescue Collar',  price: 50000,  kind: 'collar', color: '#e0383e' },
