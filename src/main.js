@@ -119,16 +119,20 @@ function endGame() {
 // haptics on touch phones (no-op elsewhere)
 const BUZZ = { die: [60, 40, 90], pup: [20, 30, 20], clear: [30, 30, 30, 30, 60], hammer: 25, extralife: [20, 20, 20] };
 function buzz(ev) { if (BUZZ[ev] && !isMuted() && !root.classList.contains('notouch')) try { navigator.vibrate?.(BUZZ[ev]); } catch {} }
+// vsync snap: rAF timestamps wobble +-1-2ms, so a raw 1/60 accumulator ran 0 or 2 sim steps on ~40% of frames (visible stutter).
+// Snap dt to the nearest whole 60Hz frame when it is within 2ms of one; a residual drift guard keeps acc from flip-flopping at the edge.
+export function snapDt(dt) { const k = Math.round(dt * 60); return k >= 1 && Math.abs(dt - k / 60) < 0.002 ? k / 60 : dt; }
 let acc = 0, last = performance.now();
 function frame(now) {
-  const dt = Math.min(0.1, (now - last) / 1000); last = now; app.t += dt;
+  const dt = snapDt(Math.min(0.1, (now - last) / 1000)); last = now; app.t += dt;
   if (app.scene === 'title') { if (startEdge || jumpEdge) newGame(); }
   else if (app.scene === 'game' && !app.paused) {
-    acc += dt;
-    while (acc >= 1 / 60) { acc -= 1 / 60;
+    acc += dt; let nSteps = 0;
+    while (acc >= 1 / 60 - 1e-6) { acc = Math.max(0, acc - 1 / 60); nSteps++;
       step(app.g, { ...keys, jump: jumpEdge }); jumpEdge = false;
       for (const ev of app.g.events) { play(ev); buzz(ev); }
       if (app.g.mode === 'over') { endGame(); break; } }
+    (window.__stepHist ||= {})[nSteps] = (window.__stepHist[nSteps] || 0) + 1; // jitter probe: sim steps per rendered frame
   } else if (app.scene === 'over') { app.overT += dt; if (app.overT > 1 && (startEdge || jumpEdge)) app.scene = 'title'; }
   else acc = 0;
   startEdge = false; if (app.scene !== 'game') jumpEdge = false;
