@@ -6,15 +6,15 @@ export const GAME = 'inu-rescue', API = 'https://kibble-pay.vercel.app';
 export const SOON_MSG = 'KIBBLE launching soon: purchases open at launch.';
 // Catalog source for kibble-pay `npm run catalog`. Prices are FEE-INCLUSIVE (player pays exactly this).
 export const COSMETICS = {
-  'collar-red':    { name: 'Red Rescue Collar',  price: 5,  kind: 'collar', color: '#e0383e' },
-  'collar-gold':   { name: 'Gold Hero Collar',   price: 15, kind: 'collar', color: '#f0c840' },
-  'collar-neon':   { name: 'Neon Night Collar',  price: 10, kind: 'collar', color: '#40f0c0' },
-  'gear-helmet':   { name: 'Fire Rescue Helmet', price: 20, kind: 'gear',   color: '#e05a2a' },
-  'gear-hivis':    { name: 'Hi-Vis Rescue Vest', price: 12, kind: 'gear',   color: '#d8f040' },
-  'gear-cape':     { name: 'Hero Cape',          price: 25, kind: 'gear',   color: '#6a3ad8' },
-  'van-classic':   { name: 'Classic Rescue Van skin', price: 30, kind: 'van', color: '#e05a6a' },
-  'van-gold':      { name: 'Gold Rescue Van skin',    price: 60, kind: 'van', color: '#f0c840' },
-  'van-midnight':  { name: 'Midnight Rescue Van skin', price: 40, kind: 'van', color: '#2a3a8a' },
+  'collar-red':    { name: 'Red Rescue Collar',  price: 50000,  kind: 'collar', color: '#e0383e' },
+  'collar-gold':   { name: 'Gold Hero Collar',   price: 150000, kind: 'collar', color: '#f0c840' },
+  'collar-neon':   { name: 'Neon Night Collar',  price: 100000, kind: 'collar', color: '#40f0c0' },
+  'gear-helmet':   { name: 'Fire Rescue Helmet', price: 200000, kind: 'gear',   color: '#e05a2a' },
+  'gear-hivis':    { name: 'Hi-Vis Rescue Vest', price: 120000, kind: 'gear',   color: '#d8f040' },
+  'gear-cape':     { name: 'Hero Cape',          price: 250000, kind: 'gear',   color: '#6a3ad8' },
+  'van-classic':   { name: 'Classic Rescue Van skin', price: 300000, kind: 'van', color: '#e05a6a' },
+  'van-gold':      { name: 'Gold Rescue Van skin',    price: 600000, kind: 'van', color: '#f0c840' },
+  'van-midnight':  { name: 'Midnight Rescue Van skin', price: 400000, kind: 'van', color: '#2a3a8a' },
 };
 const LS = typeof localStorage !== 'undefined' ? localStorage : { _: {}, getItem(k) { return this._[k] ?? null; }, setItem(k, v) { this._[k] = String(v); } };
 const load = (k, d) => { try { return JSON.parse(LS.getItem('ir.' + k)) ?? d; } catch { return d; } };
@@ -23,9 +23,9 @@ export const DEMO = typeof location !== 'undefined' && new URLSearchParams(locat
 // pups saved first, in-game points break ties (capped so a pup always outranks points)
 export const runScore = (prog) => (prog.saved | 0) * 10000 + Math.min(9999, prog.score | 0);
 export const demoWallet = { // ?demo=1 only
-  balanceUi: () => String(load('demo.bal', 200)),
+  balanceUi: () => String(load('demo.bal', 2000000)),
   owned: (id) => load('demo.inv', []).includes(id),
-  async buy(id, price) { const bal = load('demo.bal', 200); if (bal < price) return { ok: false, error: 'Not enough demo KIBBLE' };
+  async buy(id, price) { const bal = load('demo.bal', 2000000); if (bal < price) return { ok: false, error: 'Not enough demo KIBBLE' };
     save('demo.bal', +(bal - price).toFixed(6)); const inv = load('demo.inv', []); if (!inv.includes(id)) inv.push(id); save('demo.inv', inv); return { ok: true }; },
 };
 export const K = { mode: DEMO ? 'demo' : 'loading', kp: null, glue: null, owned: {}, shiba: null, address: null };

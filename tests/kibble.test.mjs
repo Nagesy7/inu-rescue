@@ -11,8 +11,8 @@ test('not demo: nothing owned, look has no cosmetics, scores skipped without sig
   assert.deepEqual(await KB.postRun({ saved: 3, score: 10, timeMs: 60000 }), { ok: false, skipped: true });
 });
 test('demo wallet: buy deducts fake KIBBLE, owned item can be equipped', async () => {
-  KB.K.mode = 'demo'; assert.equal((await KB.demoWallet.buy('collar-gold', 15)).ok, true); assert.equal(KB.demoWallet.balanceUi(), '185');
-  assert.equal(KB.look().collar.id, 'collar-gold'); assert.equal((await KB.demoWallet.buy('van-gold', 999)).ok, false); KB.K.mode = 'soon';
+  KB.K.mode = 'demo'; assert.equal((await KB.demoWallet.buy('collar-gold', 150000)).ok, true); assert.equal(KB.demoWallet.balanceUi(), '1850000');
+  assert.equal(KB.look().collar.id, 'collar-gold'); assert.equal((await KB.demoWallet.buy('van-gold', 9990000)).ok, false); KB.K.mode = 'soon';
 });
 test('signed-in real mode posts a wallet-signed score only when a pup was saved', async () => {
   const calls = []; Object.assign(KB.K, { mode: 'soon', kp: { session: 't', submitScore: async (...a) => { calls.push(a); return { ok: true }; } } });
