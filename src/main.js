@@ -160,3 +160,5 @@ requestAnimationFrame(frame);
 // live rotation/resize: reset scroll, drop stuck touches
 const relayout = () => { scrollTo(0, 0); for (const id of [...ptrs.keys()]) setPtr(id, undefined); document.documentElement.dataset.orient = innerWidth > innerHeight ? 'landscape' : 'portrait'; };
 addEventListener('resize', relayout); addEventListener('orientationchange', relayout); screen.orientation?.addEventListener?.('change', relayout); relayout();
+// 🏠 Back to Inu Verse hooks (kibble-pay mountHome): confirm mid-match, save first.
+globalThis.__inuHome = { busy: () => app.scene === 'game' && app.g && app.g.mode !== 'over' ? 'Leave this run and go back to Inu Verse? The current run ends (your best score is kept).' : false };
