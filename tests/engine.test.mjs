@@ -28,6 +28,24 @@ test('ladder climb up reaches next girder, down returns', () => {
   E.step(g, { down: true }); assert.equal(p.state, 'climb'); run(g, { down: true }, 120);
   assert.ok(Math.abs(p.y - E.surfaceY(g.plats[0], 110)) < 0.01);
 });
+test('squeaky bone no longer blocks jumping (rooftop gaps stay passable)', () => {
+  const g = play({ stage: 1 }); const p = g.player; p.hammer = 5; E.step(g, { jump: true, right: true }); assert.equal(p.state, 'air'); assert.ok(p.vx > 0);
+  // and the rooftop gap jump is makeable while holding it
+  const h = play({ stage: 1 }); const q = h.player; q.x = 68; q.hammer = 9; h.spawnT = 999; E.step(h, { jump: true, right: true }); run(h, { right: true }, 50);
+  assert.equal(h.mode, 'play'); assert.ok(Math.abs(q.y - 220) < 0.5 && q.x > 90, `${q.x},${q.y}`);
+});
+test('coyote time: jump pressed just after running off an edge still jumps', () => {
+  const g = play({ stage: 1 }); const p = g.player; p.x = 69; let n = 0; while (p.state === 'walk' && n++ < 20) E.step(g, { right: true });
+  assert.equal(p.state, 'air'); E.step(g, { right: true, jump: true }); assert.ok(p.vy < -100, String(p.vy));
+});
+test('DELIVERY RUN fairness: full-width street catches van misses, wide docks, slow vans early, nothing thrown while riding', () => {
+  const g = play({ stage: 2 }); const S = g.S; assert.equal(S.plats[0].x1, 0); assert.equal(S.plats[0].x2, 256);
+  for (const m of S.movers) assert.ok(m.speed <= 22 && m.w >= 48); assert.ok(S.hazards.filter(k => k === 'tin').length <= 1);
+  const p = g.player, l = g.lifts[0]; p.x = l.x1 + 4; p.y = l.y1; p.ride = l.m; run(g, { left: true }, 40); assert.equal(g.mode, 'play'); assert.equal(p.y, 232);
+  const v1 = E.moverPos(S.movers[1], 3, 0), v2 = E.moverPos(S.movers[1], 3, 2); assert.notDeepEqual(v1, v2, 'vans speed up on later loops');
+  const h = play({ stage: 2 }); const q = h.player, k = h.lifts[1]; q.x = k.x1 + 20; q.y = k.y1; q.ride = k.m; h.spawnT = 0;
+  for (let i = 0; i < 30; i++) { E.step(h, {}); h.spawnT = Math.min(h.spawnT, 0); } assert.equal(h.hazards.length, 0);
+});
 test('no ladder means up does nothing; hammer blocks climbing', () => {
   const g = play(); g.player.x = 80; E.step(g, { up: true }); assert.equal(g.player.state, 'walk');
   g.player.x = 110; g.player.hammer = 5; E.step(g, { up: true }); assert.equal(g.player.state, 'walk');

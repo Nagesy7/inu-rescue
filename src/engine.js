@@ -1,6 +1,6 @@
 // Inu Rescue — pure game logic (no DOM). Runs in browser and in Node tests.
 export const W = 256, H = 240, DT = 1 / 60;
-export const PHYS = { walk: 54, climb: 38, jumpVy: -132, grav: 430, jumpVx: 54, maxDrop: 40, roll: 62, flea: 26 };
+export const PHYS = { walk: 54, climb: 38, jumpVy: -132, grav: 430, jumpVx: 54, maxDrop: 40, coyote: 0.1, roll: 62, flea: 26 };
 
 // Roller speed: slower than walking (54px/s) on stage 1, ramping per stage and loop.
 export function rollSpeed(g) { return Math.min(PHYS.roll + 8 * g.loop, 40 + 7 * g.stage + 8 * g.loop); }
@@ -29,14 +29,15 @@ export const STAGES = [
     hammers: [{x:200,p:3}], toys: [{x:240,p:3,k:'bow'},{x:40,p:6,k:'bag'}],
     start: {x:20,p:0}, checkpoint: {x:110,p:4}, pups: [{x:84,p:4}], exit: {x:240,p:8},
     perches: [{x:170,p:8},{x:60,p:6},{x:230,p:8},{x:180,p:7}], movers: [], fleaSpots: [] },
-  { name: 'DELIVERY RUN', theme: 'truck', hazards: ['tin', 'tin', 'yarn'], spawn: 2.8,
-    plats: [P(0,232,60,232), P(200,200,256,200), P(150,150,256,150), P(0,148,40,148), P(0,100,90,100), P(196,76,256,76)],
+  { name: 'DELIVERY RUN', theme: 'truck', hazards: ['tin', 'yarn'], spawn: 3.2, maxDrop: 72,
+    // street runs the full width (missing the first van is a retry, not a death); docks are wide; vans start slow and ramp per loop
+    plats: [P(0,232,256,232), P(190,200,256,200), P(144,150,256,150), P(0,148,48,148), P(0,100,96,100), P(188,76,256,76)],
     ladders: [{x:240,top:2,bot:1},{x:20,top:4,bot:3}],
     hammers: [{x:240,p:2}], toys: [{x:20,p:0,k:'bow'},{x:60,p:4,k:'bag'}],
     start: {x:20,p:0}, checkpoint: {x:220,p:2}, pups: [{x:180,p:2}], exit: {x:240,p:5},
     perches: [{x:230,p:5},{x:50,p:4},{x:220,p:5}], fleaSpots: [],
-    movers: [{kind:'truck',y:216,min:52,max:160,w:48,speed:30},{kind:'truck',y:164,min:30,max:124,w:44,speed:26,phase:0.5},
-             {kind:'truck',y:92,min:84,max:166,w:40,speed:28,phase:0.25}] },
+    movers: [{kind:'truck',y:216,min:52,max:150,w:56,speed:22},{kind:'truck',y:164,min:30,max:120,w:52,speed:20,phase:0.5},
+             {kind:'truck',y:92,min:84,max:160,w:48,speed:22,phase:0.25}] },
   { name: 'DOG PARK', theme: 'park', hazards: ['yarn'], spawn: 2.8, final: true,
     plats: [P(0,220,92,220), P(164,220,256,220), P(0,160,70,160), P(186,160,256,160), P(104,136,152,136)],
     ladders: [{x:30,top:2,bot:0},{x:226,top:3,bot:1}],
@@ -108,14 +109,14 @@ export function loadStage(g, respawn = false) {
   updateLifts(g);
 }
 // moving platforms: delivery-truck roofs (back and forth) and swinging rope seats (pendulum)
-export function moverPos(m, t) {
-  if (m.kind === 'truck') { const span = m.max - m.min, per = 2 * span / m.speed; let u = ((t / per + (m.phase || 0)) % 1 + 1) % 1;
+export function moverPos(m, t, loop = 0) {
+  if (m.kind === 'truck') { const span = m.max - m.min, per = 2 * span / (m.speed * (1 + 0.2 * Math.min(loop, 3))); let u = ((t / per + (m.phase || 0)) % 1 + 1) % 1;
     const x1 = m.min + span * (u < 0.5 ? u * 2 : 2 - u * 2); return { x1, x2: x1 + m.w, y: m.y }; }
   const th = m.amp * Math.sin(2 * Math.PI * (t / m.period + (m.phase || 0))), sx = m.px + m.L * Math.sin(th), sy = m.py + m.L * Math.cos(th);
   return { x1: sx - m.w / 2, x2: sx + m.w / 2, y: sy };
 }
 function updateLifts(g) {
-  g.lifts = g.S.movers.map(m => { const a = moverPos(m, g.t), b = moverPos(m, g.t - DT);
+  g.lifts = g.S.movers.map(m => { const a = moverPos(m, g.t, g.loop), b = moverPos(m, g.t - DT, g.loop);
     return { x1: a.x1, x2: a.x2, y1: a.y, y2: a.y, mover: m.kind, m, dx: a.x1 - b.x1, dy: a.y - b.y }; });
 }
 
@@ -144,21 +145,23 @@ function stepPlayer(g, inp) {
     if (dir) p.face = dir;
     if (!p.hammer && inp.up) { const L = ladderUp(g, p.x, p.y); if (L) { p.state = 'climb'; p.lad = L; p.x = L.x; p.ride = null; return; } }
     if (!p.hammer && inp.down) { const L = ladderDown(g, p.x, p.y); if (L) { p.state = 'climb'; p.lad = L; p.x = L.x; p.y += 1; p.ride = null; return; } }
-    if (!p.hammer && inp.jump) {
+    if (inp.jump) { // the squeaky bone no longer blocks jumping (gaps stay passable); it still blocks ladders
       const rl = p.ride && g.lifts.find(q => q.m === p.ride); // keep the truck/rope momentum when jumping off it
       p.state = 'air'; p.vy = PHYS.jumpVy + (rl ? Math.min(0, rl.dy / DT) : 0); p.vx = dir * PHYS.jumpVx + (rl ? rl.dx / DT : 0); p.takeoffY = p.y; p.jumpId++; p.jumpCount = 0; p.ride = null; g.events.push('jump'); return;
     }
     p.x = Math.max(6, Math.min(W - 6, p.x + dir * PHYS.walk * dt));
     if (dir) p.anim += dt;
     const gr = findGround(g, p.x, p.y, 4, 4);
-    if (gr) { p.y = gr.sy; p.ride = gr.pl.mover ? gr.pl.m : null; } else { p.state = 'air'; p.vy = 0; p.vx = 0; p.takeoffY = p.y; p.ride = null; }
+    if (gr) { p.y = gr.sy; p.ride = gr.pl.mover ? gr.pl.m : null; } else { p.state = 'air'; p.vy = 0; p.vx = 0; p.takeoffY = p.y; p.coyote = PHYS.coyote; p.coyoteVx = dir * PHYS.jumpVx + (p.ride ? (g.lifts.find(q => q.m === p.ride)?.dx || 0) / DT : 0); p.ride = null; }
   } else if (p.state === 'air') {
+    // coyote time: a jump pressed just after running off an edge still counts
+    if (p.coyote > 0) { p.coyote -= dt; if (inp.jump) { p.coyote = 0; p.vy = PHYS.jumpVy; p.vx = p.coyoteVx; p.takeoffY = p.y; p.jumpId++; g.events.push('jump'); } }
     p.vy += PHYS.grav * dt; const py = p.y;
     p.x += p.vx * dt; if (p.x < 6 || p.x > W - 6) { p.x = Math.max(6, Math.min(W - 6, p.x)); p.vx = -p.vx; }
     p.y += p.vy * dt;
     if (p.vy > 0) {
       const l = landCross(g, p.x, py, p.y);
-      if (l) { p.y = l.sy; p.state = 'walk'; p.ride = l.pl.mover ? l.pl.m : null; if (p.y - p.takeoffY > PHYS.maxDrop) killPlayer(g, 'fall'); else g.events.push('land'); }
+      if (l) { p.y = l.sy; p.state = 'walk'; p.ride = l.pl.mover ? l.pl.m : null; if (p.y - p.takeoffY > (g.S.maxDrop || PHYS.maxDrop)) killPlayer(g, 'fall'); else g.events.push('land'); }
     }
     if (p.y > H + 20) killPlayer(g, 'fall');
   } else if (p.state === 'climb') {
@@ -187,6 +190,7 @@ function stepCat(g) {
 }
 function spawnHazard(g) {
   const S = g.S, c = g.cat, lv = g.loop, p = g.player;
+  if (p.ride?.kind === 'truck' && p.state === 'walk') return; // fair: nothing is thrown at you while you ride a delivery van roof
   const kind = S.hazards[Math.floor(g.rng() * S.hazards.length)];
   if (kind === 'yarn') {
     if (c.hop) return;

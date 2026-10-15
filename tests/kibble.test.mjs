@@ -17,6 +17,6 @@ test('demo wallet: buy deducts fake KIBBLE, owned item can be equipped', async (
 test('signed-in real mode posts a wallet-signed score only when a pup was saved', async () => {
   const calls = []; Object.assign(KB.K, { mode: 'soon', kp: { session: 't', submitScore: async (...a) => { calls.push(a); return { ok: true }; } } });
   assert.equal((await KB.postRun({ saved: 0, score: 900, timeMs: 30000 })).skipped, true);
-  assert.equal((await KB.postRun({ saved: 2, score: 900, timeMs: 61000 })).ok, true); assert.deepEqual(calls, [['inu-rescue', 20900, 61000]]); KB.K.kp = null;
+  assert.equal((await KB.postRun({ saved: 2, score: 900, timeMs: 61000 })).ok, true); assert.deepEqual(calls, [['inu-rescue', 20900, 61000, { v: 2 }]]); assert.equal(KB.SCORE_VERSION, 2); KB.K.kp = null;
 });
 test('every cosmetic is priced and typed', () => { for (const [id, c] of Object.entries(KB.COSMETICS)) { assert.ok(c.price > 0, id); assert.ok(['collar', 'gear', 'van'].includes(c.kind)); } });

@@ -1,5 +1,7 @@
 // $KIBBLE hooks for Inu Rescue. Real kibble-pay by default ("KIBBLE launching soon" until the mint is set);
 // fake balance + local inventory ONLY with ?demo=1. Cosmetics are visual only (no gameplay advantage).
+// v2 = remixed stages; kibble-pay keeps v2 scores on their own board (inu-rescue@v2) and rejects untagged/old clients
+export const SCORE_VERSION = 2;
 export const GAME = 'inu-rescue', API = 'https://kibble-pay.vercel.app';
 export const SOON_MSG = 'KIBBLE launching soon: purchases open at launch.';
 // Catalog source for kibble-pay `npm run catalog`. Prices are FEE-INCLUSIVE (player pays exactly this).
@@ -52,5 +54,5 @@ export async function openShop(onChange) {
 // wallet-signed score: only when signed in (not demo), at least one pup saved
 export async function postRun(prog) {
   if (K.mode === 'demo' || !K.kp?.session || !(prog.saved > 0)) return { ok: false, skipped: true };
-  try { return await K.kp.submitScore(GAME, runScore(prog), prog.timeMs); } catch (e) { return { ok: false, reason: e.message }; }
+  try { return await K.kp.submitScore(GAME, runScore(prog), prog.timeMs, { v: SCORE_VERSION }); } catch (e) { return { ok: false, reason: e.message }; }
 }

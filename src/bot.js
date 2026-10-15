@@ -11,11 +11,11 @@ export const ROUTES = [
     3: g => ({ x: 152, act: 'jump', dir: -1 }), 4: g => freed(g) ? { x: 72, act: 'jump', dir: -1 } : { x: 84 }, 5: g => ({ x: 30, act: 'up' }),
     6: g => ({ x: 118, act: 'jump', dir: 1 }), 7: g => ({ x: 200, act: 'up' }), 8: g => ({ x: g.exit.x }) },
   { 0: g => ({ x: 56, act: 'jump', dir: 1, when: g => L(g, 0).x1 < 56 && L(g, 0).dx > 0 }),
-    lift0: g => ({ x: L(g, 0).x2 - 6, act: 'jump', dir: 1, when: g => L(g, 0).x2 > 204 }),
-    1: g => ({ x: 240, act: 'up' }), 2: g => freed(g) ? { x: 151, act: 'drop', dir: -1, when: g => L(g, 1).x2 > 158 && L(g, 1).dx > 0 } : { x: 180 },
-    lift1: g => ({ x: L(g, 1).x1 + 6, act: 'jump', dir: -1, when: g => L(g, 1).x1 < 33 }),
-    3: g => ({ x: 20, act: 'up' }), 4: g => ({ x: 86, act: 'jump', dir: 1, when: g => L(g, 2).x1 < 88 && L(g, 2).dx > 0 }),
-    lift2: g => ({ x: L(g, 2).x2 - 6, act: 'jump', dir: 1, when: g => L(g, 2).x2 > 204 }), 5: g => ({ x: g.exit.x }) },
+    lift0: g => ({ x: L(g, 0).x2 - 6, act: 'jump', dir: 1, when: g => L(g, 0).x2 > 198 }),
+    1: g => ({ x: 240, act: 'up' }), 2: g => freed(g) ? { x: 145, act: 'drop', dir: -1, when: g => L(g, 1).x2 > 154 && L(g, 1).dx > 0 } : { x: 180 },
+    lift1: g => ({ x: L(g, 1).x1 + 6, act: 'jump', dir: -1, when: g => L(g, 1).x1 < 40 }),
+    3: g => ({ x: 20, act: 'up' }), 4: g => ({ x: 92, act: 'jump', dir: 1, when: g => L(g, 2).x1 < 94 && L(g, 2).dx > 0 }),
+    lift2: g => ({ x: L(g, 2).x2 - 6, act: 'jump', dir: 1, when: g => L(g, 2).x2 > 198 }), 5: g => ({ x: g.exit.x }) },
   { 0: g => ({ x: 30, act: 'up' }), 2: g => freed(g, 0) ? { x: 68, act: 'drop', dir: 1, when: g => L(g, 1).x1 > 58 && L(g, 1).x1 < 68 } : { x: 14 },
     lift1: g => ({ x: L(g, 1).x1 + 11, act: 'jump', dir: 1, when: g => L(g, 1).x1 + 11 > 100 && L(g, 1).dx > 0 }),
     4: g => freed(g, 2) ? { x: 150, act: 'drop', dir: 1, when: g => L(g, 2).x1 < 148 } : { x: 128 },
@@ -41,16 +41,16 @@ export function botInput(g) {
     if (b.state && b.state !== 'roll' && b.state !== 'walk') continue;
     if (Math.abs(b.y - p.y) > 8) continue;
     const ex = b.x - p.x, closing = (b.vx || 0) * -Math.sign(ex) + (near ? 0 : Math.sign(dx) * Math.sign(ex) * 54);
-    if (Math.abs(ex) < 22 && closing > 0 && p.hammer) { inp[ex > 0 ? 'right' : 'left'] = true; return inp; }
+    if (Math.abs(ex) < 22 && closing > 0 && p.hammer && Math.abs(b.y - p.y) < 3) { inp[ex > 0 ? 'right' : 'left'] = true; return inp; }
     if (Math.abs(ex) < 22 && closing > 0 && !p.hammer) { inp.jump = true; const nx = p.x + Math.sign(ex) * 30; if (nx > gr.pl.x1 + 2 && nx < gr.pl.x2 - 2 && !gr.pl.mover) inp[ex > 0 ? 'right' : 'left'] = true; return inp; }
   }
   // dodge a tin about to drop on our spot
   const tin = g.hazards.find(b => b.kind === 'tin' && b.state === 'warn' && Math.abs(b.x - p.x) < 12);
   const away = tin && (tin.x > p.x ? -12 : 12); if (tin && !gr.pl.mover && p.x + away > gr.pl.x1 + 4 && p.x + away < gr.pl.x2 - 4) { if (tin.x > p.x) inp.left = true; else inp.right = true; return inp; }
-  const ready = r.act && (!r.when || r.when(g)) && Math.abs(dx) < (r.act === 'drop' ? 4 : 1.5);
+  const ready = r.act && (!r.when || r.when(g)) && Math.abs(dx) < (r.act === 'drop' ? (gr.pl.mover ? 12 : 4) : 1.5);
   if (!ready && !near && !(gr.pl.mover && r.when && !r.when(g) && Math.abs(dx) < 10)) { if (dx > 0) inp.right = true; else inp.left = true; return inp; }
   if (r.when && !r.when(g)) return inp;
-  if (p.hammer && (r.act === 'up' || r.act === 'jump')) return inp; // can't jump/climb holding the squeaky bone: wait it out
+  if (p.hammer && r.act === 'up') return inp; // can't jump/climb holding the squeaky bone: wait it out
   if (r.act === 'up') inp.up = true;
   else if (r.act === 'jump') { inp.jump = true; if (r.dir > 0) inp.right = true; else inp.left = true; }
   else if (r.act === 'drop') { if (r.dir > 0) inp.right = true; else inp.left = true; }
