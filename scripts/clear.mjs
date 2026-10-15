@@ -48,7 +48,7 @@ for (let i = 0; i < 200 && (await st()).scene === 'game'; i++) await W(20);
 ok((await st()).scene === 'entry', 'game over -> name entry');
 for (const ch of 'PLAYTEST') await p.keyboard.press('Key' + ch); await W(100);
 await p.locator('#screen').screenshot({ path: 'proof/fix-04-name-entry.png' }); await p.keyboard.press('Enter'); await W(300);
-const lb = await p.evaluate(() => JSON.parse(localStorage.getItem('inu-rescue.leaderboard.v1'))); ok(lb.some(e => e.name === 'PLAYTEST'), 'leaderboard stores PLAYTEST (8 chars)');
+const lb = await p.evaluate(() => JSON.parse(localStorage.getItem('inu-rescue.leaderboard.v2'))); ok(lb.some(e => e.name === 'PLAYTEST'), 'leaderboard stores PLAYTEST (8 chars)');
 await W(1200); await p.locator('#screen').screenshot({ path: 'proof/fix-05-leaderboard.png' });
 await p.screenshot({ path: 'proof/fix-06-desktop-nopad.png' });
 ok(!errs.length, 'no page errors ' + errs.join('; '));

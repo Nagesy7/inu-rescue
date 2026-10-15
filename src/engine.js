@@ -10,36 +10,43 @@ export function mulberry32(a) {
 }
 
 // ---------- stage data ----------
+// Original Inu layouts: flat timber/branch/roof platforms (no sloped zig-zag tower), a pup caged MID-stage that must be
+// freed before the exit opens, a villain cat that roams between perches, and a final park stage with three kennels.
 const P = (x1, y1, x2, y2, extra = {}) => ({ x1, y1, x2, y2, ...extra });
 export const STAGES = [
-  { name: 'SCAFFOLD', hazard: 'yarn',
-    plats: [P(0,232,256,226), P(0,196,240,204), P(16,170,256,162), P(0,128,240,136), P(16,104,256,96), P(0,68,208,72), P(88,42,152,42)],
-    ladders: [{x:200,top:1,bot:0},{x:110,top:1,bot:0},{x:60,top:2,bot:1},{x:150,top:2,bot:1},{x:180,top:3,bot:2},{x:100,top:3,bot:2},
-              {x:40,top:4,bot:3},{x:130,top:4,bot:3},{x:190,top:5,bot:4},{x:140,top:6,bot:5}],
-    hammers: [{x:30,p:1},{x:216,p:3}], toys: [{x:230,p:2,k:'bow'},{x:70,p:4,k:'bag'}],
-    start: {x:40,p:0}, checkpoint: {x:200,p:3}, pup: {x:112,p:6}, cat: {x:24,p:5}, bowl: {x:14,p:0}, fleaMax: 4, rivets: [], shafts: [] },
-  { name: 'KIBBLE WORKS', hazard: 'tin',
-    plats: [P(0,232,256,232), P(8,196,248,196,{conv:1}), P(0,160,120,160,{conv:-1}), P(136,160,256,160,{conv:1}),
-            P(8,124,248,124,{conv:-1}), P(0,88,256,88), P(96,52,160,52)],
-    ladders: [{x:30,top:1,bot:0},{x:226,top:1,bot:0},{x:60,top:2,bot:1},{x:200,top:3,bot:1},{x:100,top:4,bot:2},{x:160,top:4,bot:3},
-              {x:40,top:5,bot:4},{x:220,top:5,bot:4},{x:140,top:6,bot:5}],
-    hammers: [{x:20,p:2},{x:236,p:3}], toys: [{x:128,p:5,k:'bow'},{x:236,p:0,k:'bag'}],
-    start: {x:120,p:0}, checkpoint: {x:128,p:4}, pup: {x:112,p:6}, cat: {x:40,p:5}, bowl: {x:128,p:0}, fleaMax: 3, rivets: [], shafts: [] },
-  { name: 'DUMBWAITERS', hazard: 'ball',
-    plats: [P(0,232,256,232), P(0,196,40,196), P(68,112,146,112), P(180,140,256,140), P(180,98,256,98), P(72,56,256,56), P(0,56,40,56)],
-    ladders: [{x:20,top:1,bot:0},{x:236,top:3,bot:0},{x:236,top:4,bot:3},{x:196,top:5,bot:4},{x:110,top:2,bot:0}],
-    hammers: [{x:120,p:0}], toys: [{x:96,p:2,k:'bow'},{x:220,p:3,k:'bag'}],
-    start: {x:60,p:0}, checkpoint: {x:200,p:3}, pup: {x:132,p:5}, cat: {x:20,p:6}, bowl: {x:170,p:0}, fleaMax: 3, rivets: [],
-    shafts: [{x1:40,x2:68,top:60,bot:236,dir:-1,speed:26,n:3},{x1:146,x2:178,top:60,bot:236,dir:1,speed:26,n:3}] },
-  { name: 'PEG TOWER', hazard: 'none',
-    plats: [P(0,232,256,232), P(16,196,240,196), P(24,160,232,160), P(32,124,224,124), P(40,88,216,88), P(56,52,200,52)],
-    ladders: [{x:30,top:1,bot:0},{x:128,top:1,bot:0},{x:226,top:1,bot:0},{x:40,top:2,bot:1},{x:216,top:2,bot:1},
-              {x:48,top:3,bot:2},{x:128,top:3,bot:2},{x:208,top:3,bot:2},{x:56,top:4,bot:3},{x:200,top:4,bot:3},{x:80,top:5,bot:4},{x:176,top:5,bot:4}],
-    hammers: [{x:120,p:1},{x:150,p:3}], toys: [{x:100,p:2,k:'bow'},{x:160,p:4,k:'bag'}],
-    start: {x:90,p:0}, pup: {x:100,p:5}, cat: {x:128,p:5}, bowl: {x:20,p:0}, fleaMax: 5,
-    rivets: [1,2,3,4].flatMap(p => [{x:72,p},{x:184,p}]), shafts: [] },
+  { name: 'TREEHOUSE CLIMB', theme: 'tree', hazards: ['yarn'], spawn: 2.4,
+    plats: [P(0,232,256,232), P(16,196,128,196), P(150,196,240,196), P(40,160,216,160), P(0,124,100,124), P(124,124,240,124),
+            P(30,88,200,88), P(70,52,186,52)],
+    ladders: [{x:110,top:1,bot:0},{x:220,top:2,bot:0},{x:60,top:3,bot:1},{x:200,top:3,bot:2},{x:80,top:4,bot:3},{x:180,top:5,bot:3},
+              {x:50,top:6,bot:4},{x:150,top:6,bot:5},{x:100,top:7,bot:6}],
+    hammers: [{x:30,p:1},{x:226,p:5}], toys: [{x:230,p:2,k:'bow'},{x:16,p:4,k:'bag'}],
+    start: {x:40,p:0}, checkpoint: {x:128,p:3}, pups: [{x:150,p:3}], exit: {x:176,p:7},
+    perches: [{x:90,p:7},{x:186,p:6},{x:120,p:6},{x:150,p:7}], movers: [], fleaSpots: [] },
+  { name: 'ROOFTOP CHASE', theme: 'roof', hazards: ['tin', 'yarn'], spawn: 1.9,
+    plats: [P(0,232,70,232), P(86,220,170,220), P(186,208,256,208), P(150,172,256,172), P(70,160,134,160), P(0,146,50,146),
+            P(20,108,120,108), P(136,96,212,96), P(150,56,250,56)],
+    ladders: [{x:236,top:3,bot:2},{x:30,top:6,bot:5},{x:200,top:8,bot:7}],
+    hammers: [{x:200,p:3}], toys: [{x:240,p:3,k:'bow'},{x:40,p:6,k:'bag'}],
+    start: {x:20,p:0}, checkpoint: {x:110,p:4}, pups: [{x:84,p:4}], exit: {x:240,p:8},
+    perches: [{x:170,p:8},{x:60,p:6},{x:230,p:8},{x:180,p:7}], movers: [], fleaSpots: [] },
+  { name: 'DELIVERY RUN', theme: 'truck', hazards: ['tin', 'tin', 'yarn'], spawn: 2.8,
+    plats: [P(0,232,60,232), P(200,200,256,200), P(150,150,256,150), P(0,148,40,148), P(0,100,90,100), P(196,76,256,76)],
+    ladders: [{x:240,top:2,bot:1},{x:20,top:4,bot:3}],
+    hammers: [{x:240,p:2}], toys: [{x:20,p:0,k:'bow'},{x:60,p:4,k:'bag'}],
+    start: {x:20,p:0}, checkpoint: {x:220,p:2}, pups: [{x:180,p:2}], exit: {x:240,p:5},
+    perches: [{x:230,p:5},{x:50,p:4},{x:220,p:5}], fleaSpots: [],
+    movers: [{kind:'truck',y:216,min:52,max:160,w:48,speed:30},{kind:'truck',y:164,min:30,max:124,w:44,speed:26,phase:0.5},
+             {kind:'truck',y:92,min:84,max:166,w:40,speed:28,phase:0.25}] },
+  { name: 'DOG PARK', theme: 'park', hazards: ['yarn'], spawn: 2.8, final: true,
+    plats: [P(0,220,92,220), P(164,220,256,220), P(0,160,70,160), P(186,160,256,160), P(104,136,152,136)],
+    ladders: [{x:30,top:2,bot:0},{x:226,top:3,bot:1}],
+    hammers: [{x:70,p:0}], toys: [{x:200,p:1,k:'bow'},{x:128,p:4,k:'bag'}],
+    start: {x:20,p:0}, pups: [{x:14,p:2},{x:242,p:3},{x:128,p:4}], exit: null,
+    perches: [{x:60,y:60},{x:196,y:60},{x:128,y:60}],
+    movers: [{kind:'rope',px:128,py:190,L:40,amp:0.75,period:2.6,w:22},{kind:'rope',px:82,py:118,L:40,amp:0.7,period:2.4,w:22,phase:0.5},
+             {kind:'rope',px:174,py:118,L:40,amp:0.7,period:2.4,w:22}],
+    fleaSpots: [{x:40,p:0},{x:220,p:1}] },
 ];
-
 export function surfaceY(pl, x) { return pl.x2 === pl.x1 ? pl.y1 : pl.y1 + (pl.y2 - pl.y1) * (x - pl.x1) / (pl.x2 - pl.x1); }
 export function ladderEnds(g, L) { return { top: surfaceY(g.plats[L.top], L.x), bot: surfaceY(g.plats[L.bot], L.x) }; }
 
@@ -64,7 +71,7 @@ function landCross(g, x, prevY, y) {
 }
 
 // ---------- scoring ----------
-export const POINTS = { jump: 100, multiJump: 300, toy: 300, rivet: 100, smash: [300, 500, 800], extraLifeAt: 10000 };
+export const POINTS = { jump: 100, multiJump: 300, toy: 300, pup: 1000, smash: [300, 500, 800], extraLifeAt: 10000 };
 export function addScore(g, n, x, y) {
   const before = g.score; g.score += n;
   if (before < POINTS.extraLifeAt && g.score >= POINTS.extraLifeAt) { g.lives++; g.events.push('extralife'); }
@@ -78,37 +85,38 @@ export function qualifies(table, score, max = 5) { return score > 0 && (table.le
 
 // ---------- game ----------
 export function createGame(opts = {}) {
-  const g = { rng: mulberry32(opts.seed ?? 1234), score: 0, lives: opts.lives ?? 3, stage: opts.stage ?? 0, loop: 0,
+  const g = { rng: mulberry32(opts.seed ?? 1234), score: 0, lives: opts.lives ?? 3, stage: opts.stage ?? 0, loop: 0, saved: 0,
     mode: 'intro', timer: 1.5, events: [], popups: [], t: 0, runTime: 0, height: 0 };
   loadStage(g); return g;
 }
+const at = (g, o) => ({ x: o.x, y: o.p !== undefined ? surfaceY(g.plats[o.p], o.x) : o.y });
 export function loadStage(g, respawn = false) {
   const S = STAGES[g.stage];
-  if (!respawn) g.cp = false;
-  if (!respawn) g.height = 0;
+  if (!respawn) { g.cp = false; g.height = 0; g.freed = S.pups.map(() => false); }
   g.S = S; g.plats = S.plats.map(p => ({ ...p })); g.lifts = []; g.t = 0;
   g.bonus = 5000 + 1000 * Math.min(g.loop, 3); g.bonusClock = 0;
   const st = g.cp && S.checkpoint ? S.checkpoint : S.start, pl = g.plats[st.p];
-  g.player = { x: st.x, y: surfaceY(pl, st.x), vx: 0, vy: 0, state: 'walk', face: 1, anim: 0, jumpId: 0, takeoffY: 0, lad: null, hammer: 0 };
-  g.hazards = []; g.fleas = []; g.spawnT = 1.2; g.fleaT = 3; g.convT = 0;
+  g.player = { x: st.x, y: surfaceY(pl, st.x), vx: 0, vy: 0, state: 'walk', face: 1, anim: 0, jumpId: 0, takeoffY: 0, lad: null, hammer: 0, ride: null };
+  g.hazards = []; g.fleas = []; g.spawnT = 1.4; g.fleaT = 4; g.convT = 0;
   g.hammers = S.hammers.map(h => ({ x: h.x, y: surfaceY(g.plats[h.p], h.x) - 14, taken: false }));
   g.toys = S.toys.map(t => ({ x: t.x, y: surfaceY(g.plats[t.p], t.x), k: t.k, taken: false }));
-  g.rivets = S.rivets.map(r => ({ ...r, y: g.plats[r.p].y1, gone: false }));
-  g.pup = { x: S.pup.x, y: surfaceY(g.plats[S.pup.p], S.pup.x) };
-  g.cat = { x: S.cat.x, y: surfaceY(g.plats[S.cat.p], S.cat.x), throwT: 0, fallen: false };
-  g.bowl = { x: S.bowl.x, y: surfaceY(g.plats[S.bowl.p], S.bowl.x) };
+  g.pups = S.pups.map((q, i) => ({ ...at(g, q), freed: g.freed[i] }));
+  g.pup = g.pups[0]; // first caged pup (render/tests)
+  g.exit = S.exit ? at(g, S.exit) : null;
+  g.perch = 0; const c0 = at(g, S.perches[0]);
+  g.cat = { x: c0.x, y: c0.y, throwT: 0, fallen: false, hop: null, dir: 1, nextHop: 5 };
   updateLifts(g);
 }
+// moving platforms: delivery-truck roofs (back and forth) and swinging rope seats (pendulum)
+export function moverPos(m, t) {
+  if (m.kind === 'truck') { const span = m.max - m.min, per = 2 * span / m.speed; let u = ((t / per + (m.phase || 0)) % 1 + 1) % 1;
+    const x1 = m.min + span * (u < 0.5 ? u * 2 : 2 - u * 2); return { x1, x2: x1 + m.w, y: m.y }; }
+  const th = m.amp * Math.sin(2 * Math.PI * (t / m.period + (m.phase || 0))), sx = m.px + m.L * Math.sin(th), sy = m.py + m.L * Math.cos(th);
+  return { x1: sx - m.w / 2, x2: sx + m.w / 2, y: sy };
+}
 function updateLifts(g) {
-  g.lifts = [];
-  for (const s of g.S.shafts) {
-    const span = s.bot - s.top, gap = span / s.n;
-    for (let i = 0; i < s.n; i++) {
-      let off = ((g.t * s.speed + i * gap) % span + span) % span;
-      const y = s.dir > 0 ? s.top + off : s.bot - off;
-      g.lifts.push({ x1: s.x1, x2: s.x2, y1: y, y2: y, lift: true, vy: s.dir * s.speed });
-    }
-  }
+  g.lifts = g.S.movers.map(m => { const a = moverPos(m, g.t), b = moverPos(m, g.t - DT);
+    return { x1: a.x1, x2: a.x2, y1: a.y, y2: a.y, mover: m.kind, m, dx: a.x1 - b.x1, dy: a.y - b.y }; });
 }
 
 export function ladderUp(g, x, y) {
@@ -128,28 +136,29 @@ export function killPlayer(g, why) {
 function stepPlayer(g, inp) {
   const p = g.player, dt = DT;
   if (p.hammer > 0) { p.hammer -= dt; if (p.hammer <= 0) { p.hammer = 0; g.events.push('hammerend'); } }
+  // ride a truck roof / rope seat: carried by its motion
+  if (p.state === 'walk' && p.ride) { const l = g.lifts.find(q => q.m === p.ride);
+    if (l && p.x >= l.x1 - 1 - Math.abs(l.dx) && p.x <= l.x2 + 1 + Math.abs(l.dx)) { p.x = Math.max(6, Math.min(W - 6, p.x + l.dx)); p.y = l.y1; } }
   const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
   if (p.state === 'walk') {
     if (dir) p.face = dir;
-    if (!p.hammer && inp.up) { const L = ladderUp(g, p.x, p.y); if (L) { p.state = 'climb'; p.lad = L; p.x = L.x; return; } }
-    if (!p.hammer && inp.down) { const L = ladderDown(g, p.x, p.y); if (L) { p.state = 'climb'; p.lad = L; p.x = L.x; p.y += 1; return; } }
+    if (!p.hammer && inp.up) { const L = ladderUp(g, p.x, p.y); if (L) { p.state = 'climb'; p.lad = L; p.x = L.x; p.ride = null; return; } }
+    if (!p.hammer && inp.down) { const L = ladderDown(g, p.x, p.y); if (L) { p.state = 'climb'; p.lad = L; p.x = L.x; p.y += 1; p.ride = null; return; } }
     if (!p.hammer && inp.jump) {
-      p.state = 'air'; p.vy = PHYS.jumpVy; p.vx = dir * PHYS.jumpVx; p.takeoffY = p.y; p.jumpId++; p.jumpCount = 0; g.events.push('jump'); return;
+      const rl = p.ride && g.lifts.find(q => q.m === p.ride); // keep the truck/rope momentum when jumping off it
+      p.state = 'air'; p.vy = PHYS.jumpVy + (rl ? Math.min(0, rl.dy / DT) : 0); p.vx = dir * PHYS.jumpVx + (rl ? rl.dx / DT : 0); p.takeoffY = p.y; p.jumpId++; p.jumpCount = 0; p.ride = null; g.events.push('jump'); return;
     }
-    let vx = dir * PHYS.walk;
-    const gr0 = findGround(g, p.x, p.y, 3, 3);
-    if (gr0 && gr0.pl.conv) vx += gr0.pl.conv * 22;
-    p.x = Math.max(6, Math.min(W - 6, p.x + vx * dt));
+    p.x = Math.max(6, Math.min(W - 6, p.x + dir * PHYS.walk * dt));
     if (dir) p.anim += dt;
     const gr = findGround(g, p.x, p.y, 4, 4);
-    if (gr) p.y = gr.sy; else { p.state = 'air'; p.vy = 0; p.vx = 0; p.takeoffY = p.y; }
+    if (gr) { p.y = gr.sy; p.ride = gr.pl.mover ? gr.pl.m : null; } else { p.state = 'air'; p.vy = 0; p.vx = 0; p.takeoffY = p.y; p.ride = null; }
   } else if (p.state === 'air') {
     p.vy += PHYS.grav * dt; const py = p.y;
     p.x += p.vx * dt; if (p.x < 6 || p.x > W - 6) { p.x = Math.max(6, Math.min(W - 6, p.x)); p.vx = -p.vx; }
     p.y += p.vy * dt;
     if (p.vy > 0) {
       const l = landCross(g, p.x, py, p.y);
-      if (l) { p.y = l.sy; p.state = 'walk'; if (p.y - p.takeoffY > PHYS.maxDrop) killPlayer(g, 'fall'); else g.events.push('land'); }
+      if (l) { p.y = l.sy; p.state = 'walk'; p.ride = l.pl.mover ? l.pl.m : null; if (p.y - p.takeoffY > PHYS.maxDrop) killPlayer(g, 'fall'); else g.events.push('land'); }
     }
     if (p.y > H + 20) killPlayer(g, 'fall');
   } else if (p.state === 'climb') {
@@ -161,60 +170,77 @@ function stepPlayer(g, inp) {
   }
 }
 
+// ---------- villain: the cat roams between perches (hops in an arc), paces on its perch, and lobs hazards ----------
+function stepCat(g) {
+  const c = g.cat, S = g.S, dt = DT;
+  c.throwT = Math.max(0, c.throwT - dt);
+  if (c.hop) { c.hop.t += dt / c.hop.dur; const u = Math.min(1, c.hop.t);
+    c.x = c.hop.x0 + (c.hop.x1 - c.hop.x0) * u; c.y = c.hop.y0 + (c.hop.y1 - c.hop.y0) * u - Math.sin(u * Math.PI) * 26;
+    if (u >= 1) { c.hop = null; g.events.push('land'); } return; }
+  c.nextHop -= dt;
+  if (c.nextHop <= 0 && S.perches.length > 1) {
+    g.perch = (g.perch + 1) % S.perches.length; const d = at(g, S.perches[g.perch]);
+    c.hop = { x0: c.x, y0: c.y, x1: d.x, y1: d.y, t: 0, dur: 0.9 }; c.nextHop = Math.max(3.5, 7 - g.loop) + g.rng() * 2; g.events.push('cathop'); return; }
+  // pace a little around the perch
+  const home = at(g, S.perches[g.perch]); c.x += c.dir * 14 * dt; if (Math.abs(c.x - home.x) > 12) c.dir = -Math.sign(c.x - home.x);
+  const pl = S.perches[g.perch].p; if (pl !== undefined) { const p = g.plats[pl]; c.x = Math.max(p.x1 + 6, Math.min(p.x2 - 6, c.x)); c.y = surfaceY(p, c.x); }
+}
 function spawnHazard(g) {
-  const S = g.S, c = g.cat, lv = g.loop;
-  if (S.hazard === 'yarn') {
-    const kind = g.rng() < 0.3 ? 'kibble' : 'yarn';
-    g.hazards.push({ kind, x: c.x + 22, y: c.y, vx: rollSpeed(g), vy: 0, state: 'roll', r: 5, rot: 0, jumpId: -1, tried: new Set() });
+  const S = g.S, c = g.cat, lv = g.loop, p = g.player;
+  const kind = S.hazards[Math.floor(g.rng() * S.hazards.length)];
+  if (kind === 'yarn') {
+    if (c.hop) return;
+    const d = Math.sign(p.x - c.x) || 1;
+    g.hazards.push({ kind: 'yarn', big: true, x: c.x + d * 10, y: c.y - 14, vx: d * (rollSpeed(g) * 0.8), vy: -60, state: 'fall', r: 5, rot: 0, jumpId: -1, tried: new Set(), fromPl: null });
     c.throwT = 0.5; g.events.push('throw');
-  } else if (S.hazard === 'tin') {
-    const convs = g.plats.map((p, i) => i).filter(i => g.plats[i].conv);
-    const i = convs[Math.floor(g.rng() * convs.length)], pl = g.plats[i];
-    const x = pl.conv > 0 ? pl.x1 + 4 : pl.x2 - 4;
-    g.hazards.push({ kind: 'tin', x, y: surfaceY(pl, x), vx: 0, vy: 0, state: 'roll', r: 5, rot: 0, jumpId: -1, tried: new Set() });
-  } else if (S.hazard === 'ball') {
-    g.hazards.push({ kind: 'ball', x: c.x + 14, y: c.y - 2, vx: 66 + lv * 6, vy: -150, state: 'fall', bounce: true, r: 5, rot: 0, jumpId: -1, tried: new Set() });
-    c.throwT = 0.5; g.events.push('throw');
+  } else if (kind === 'tin') {
+    // a tin of dog food tipped off the roof edge above: shadow warning first, then it drops straight down
+    const x = Math.max(10, Math.min(W - 10, p.x + (g.rng() * 2 - 1) * (36 - Math.min(20, lv * 6))));
+    g.hazards.push({ kind: 'tin', x, y: 16, vx: 0, vy: 0, state: 'warn', warn: Math.max(0.55, 0.9 - 0.1 * lv), r: 5, rot: 0, jumpId: -1, tried: new Set() });
   }
 }
-
 export function stepHazard(g, b) {
   const dt = DT;
-  b.rot += b.vx * dt / 5;
+  b.rot += (b.vx || 2) * dt / 5;
+  if (b.state === 'warn') { b.warn -= dt; if (b.warn <= 0) { b.state = 'drop'; g.events.push('tin'); } return; }
+  if (b.state === 'drop') { const py = b.y; b.vy += PHYS.grav * 0.8 * dt; b.y += b.vy * dt;
+    const l = landCross(g, b.x, py, b.y); if (l && l.sy > 30) { b.y = l.sy; b.state = 'clank'; b.t = 0.35; g.events.push('clank'); } return; }
+  if (b.state === 'clank') { b.t -= dt; if (b.t <= 0) b.dead = true; return; }
   if (b.state === 'roll') {
-    const gr = findGround(g, b.x, b.y, 2, 2);
+    const gr = findGround(g, b.x, b.y, 3, 3);
     if (!gr) { b.state = 'fall'; b.vy = 0; return; }
     const pl = gr.pl;
-    if (pl.conv) b.vx = pl.conv * 34;
-    else if (pl.y2 > pl.y1) b.vx = Math.abs(b.vx) || rollSpeed(g); else if (pl.y2 < pl.y1) b.vx = -(Math.abs(b.vx) || rollSpeed(g));
-    // maybe take a ladder down
-    if (b.kind !== 'tin') for (const L of g.S.ladders) {
+    if (pl.mover) b.x += pl.dx;
+    for (const L of g.S.ladders) {
       if (g.plats[L.top] !== pl || b.tried.has(L) || Math.abs(L.x - b.x) > 1.6) continue;
       b.tried.add(L);
       const chase = g.player.y > b.y ? 0.15 : 0;
-      if (g.rng() < 0.22 + 0.06 * g.loop + chase) { b.state = 'ladder'; b.lad = L; b.x = L.x; g.events.push('ladderroll'); return; }
+      if (g.rng() < 0.2 + 0.06 * g.loop + chase) { b.state = 'ladder'; b.lad = L; b.x = L.x; g.events.push('ladderroll'); return; }
     }
     b.x += b.vx * dt;
     if (b.x < pl.x1 || b.x > pl.x2) { b.state = 'fall'; b.vy = 0; b.fromPl = pl; }
     else b.y = surfaceY(pl, b.x);
   } else if (b.state === 'ladder') {
     const e = ladderEnds(g, b.lad); b.y += 44 * dt;
-    if (b.y >= e.bot) { b.y = e.bot; b.state = 'roll'; b.vx = -b.vx; b.tried.clear(); }
-  } else {
-    const py = b.y; b.vy += PHYS.grav * dt; b.y += b.vy * dt; b.x += b.vx * (b.bounce ? 1 : 0.35) * dt;
+    if (b.y >= e.bot) { b.y = e.bot; b.state = 'roll'; b.vx = -b.vx || rollSpeed(g); b.tried.clear(); }
+  } else { // fall
+    const py = b.y; b.vy += PHYS.grav * dt; b.y += b.vy * dt; b.x += b.vx * 0.5 * dt;
     if (b.vy > 0) {
       const l = landCross(g, b.x, py, b.y);
       if (l && l.pl !== b.fromPl) {
-        b.y = l.sy; b.fromPl = null;
-        if (b.bounce) { b.vy = -120; g.events.push('bounce'); }
-        else { b.state = 'roll'; b.vy = 0; if (l.pl.y1 === l.pl.y2 && !l.pl.conv) b.vx = -b.vx; b.tried.clear(); }
+        b.y = l.sy; b.fromPl = null; b.tried.clear();
+        // big yarn balls bounce once and split into two small balls rolling apart
+        if (b.big && b.vy > 90) { b.big = false; b.split = true; b.vy = -70; g.events.push('bounce'); return; }
+        if (b.split) { b.split = false; b.state = 'roll'; b.r = 4; b.vy = 0; const sp = rollSpeed(g);
+          b.vx = sp; g.hazards.push({ ...b, tried: new Set(), vx: -sp, jumpId: -1 }); g.events.push('split'); return; }
+        b.state = 'roll'; b.vy = 0; if (!b.vx) b.vx = rollSpeed(g);
       }
     }
   }
 }
 
 function spawnFlea(g, x, y) {
-  if (g.fleas.length >= g.S.fleaMax + g.loop) return;
+  if (g.fleas.length >= g.S.fleaSpots.length + g.loop) return;
   g.fleas.push({ x, y: y, vx: g.rng() < 0.5 ? -PHYS.flea : PHYS.flea, state: 'walk', lad: null, t: g.rng() * 9, r: 4 });
   g.events.push('flea');
 }
@@ -227,7 +253,7 @@ export function stepFlea(g, f) {
   }
   f.cool = Math.max(0, (f.cool || 0) - dt);
   const gr = findGround(g, f.x, f.y, 4, 4);
-  if (!gr) { f.y += 60 * dt; return; }
+  if (!gr) { f.y += 60 * dt; if (f.y > H + 10) f.dead = true; return; }
   f.y = gr.sy;
   if (!f.cool) for (const L of g.S.ladders) {
     if (Math.abs(L.x - f.x) > 1) continue;
@@ -248,56 +274,61 @@ export function hitCircleBox(cx, cy, r, bx1, by1, bx2, by2) {
 }
 export function playerBox(p) { return [p.x - 4, p.y - 14, p.x + 4, p.y - 1]; }
 export function hammerZone(p) { return { x: p.x + p.face * 9, y: p.y - 10, r: 11 }; }
+const deadly = b => b.state !== 'warn' && b.state !== 'clank';
 
+export function freePup(g, i) {
+  const q = g.pups[i]; if (!q || q.freed || g.mode !== 'play') return;
+  q.freed = true; g.freed[i] = true; g.saved = (g.saved || 0) + 1; addScore(g, POINTS.pup, q.x, q.y - 20);
+  g.popups.push({ x: q.x, y: q.y - 30, text: 'PUP SAVED!', t: 1.6 }); g.events.push('pup');
+  if (g.S.final && g.pups.every(r => r.freed)) clearStage(g);
+}
 function collisions(g) {
   const p = g.player, box = playerBox(p);
-  // pickups
   for (const h of g.hammers) if (!h.taken && Math.abs(h.x - p.x) < 8 && Math.abs(h.y + 4 - (p.y - 8)) < 12 && p.state !== 'climb') {
     h.taken = true; p.hammer = 9; g.events.push('hammer');
   }
   for (const t of g.toys) if (!t.taken && Math.abs(t.x - p.x) < 8 && Math.abs(t.y - p.y) < 8) { t.taken = true; addScore(g, POINTS.toy, t.x, t.y - 12); g.events.push('toy'); }
-  for (const r of g.rivets) if (!r.gone && p.state === 'walk' && Math.abs(r.x - p.x) < 5 && Math.abs(r.y - p.y) < 2) {
-    r.gone = true; addScore(g, POINTS.rivet, r.x, r.y - 14); g.events.push('rivet');
-  }
-  // hammer smashes
   if (p.hammer > 0) {
     const z = hammerZone(p);
     for (const list of [g.hazards, g.fleas]) for (let i = list.length - 1; i >= 0; i--) {
-      const e = list[i], ey = e.y - e.r;
+      const e = list[i], ey = e.y - e.r; if (!deadly(e)) continue;
       if ((e.x - z.x) ** 2 + (ey - z.y) ** 2 < (z.r + e.r) ** 2) {
         list.splice(i, 1); const pts = POINTS.smash[Math.floor(g.rng() * 3)];
         addScore(g, pts, e.x, ey - 8); g.events.push('smash');
       }
     }
   }
-  // deadly contact
-  for (const e of g.hazards.concat(g.fleas)) if (hitCircleBox(e.x, e.y - e.r, e.r - 1, ...box)) { killPlayer(g, e.kind || 'flea'); return; }
-  // jump-over scoring
+  for (const e of g.hazards.concat(g.fleas)) if (deadly(e) && hitCircleBox(e.x, e.y - e.r, e.r - 1, ...box)) { killPlayer(g, e.kind || 'flea'); return; }
   if (p.state === 'air') {
     let n = 0;
     for (const e of g.hazards.concat(g.fleas)) {
+      if (e.state !== 'roll' && e.state !== 'walk' && e.state !== 'ladder' && e.kind !== 'flea' && e.state !== undefined) continue;
       if (e.jumpId !== p.jumpId && Math.abs(e.x - p.x) < 7 && e.y > p.y && e.y - p.y < 28) { e.jumpId = p.jumpId; n++; }
     }
     if (n) { addScore(g, n > 1 ? POINTS.multiJump : POINTS.jump, p.x, p.y - 20); g.events.push('score'); }
   }
-  // mid-tower checkpoint: standing on the checkpoint girder saves the respawn point
   const cp = g.S.checkpoint;
   if (cp && !g.cp && p.state === 'walk') { const gr = findGround(g, p.x, p.y, 2, 2); if (gr && gr.pl === g.plats[cp.p]) { g.cp = true; g.events.push('checkpoint'); g.popups.push({ x: p.x, y: p.y - 22, text: 'CHECKPOINT', t: 1.5 }); } }
-  // stage clear
-  if (g.S.rivets.length) { if (g.rivets.every(r => r.gone)) clearStage(g); }
-  else if (Math.abs(p.x - g.pup.x) < 20 && Math.abs(p.y - g.pup.y) < 10 && p.state !== 'dead') clearStage(g);
+  if (p.state === 'dead') return;
+  g.pups.forEach((q, i) => { if (!q.freed && Math.abs(p.x - q.x) < 14 && Math.abs(p.y - q.y) < 10) freePup(g, i); });
+  if (g.exit && g.pups.every(q => q.freed) && Math.abs(p.x - g.exit.x) < 12 && Math.abs(p.y - g.exit.y) < 10) clearStage(g);
 }
 export function clearStage(g) {
   if (g.mode !== 'play') return;
-  addScore(g, g.bonus, g.player.x, g.player.y - 24); g.saved = (g.saved || 0) + 1; g.height = 100; g.mode = 'clear'; g.timer = 2.5; g.cat.fallen = !!g.S.rivets.length; g.events.push('clear');
+  g.pups.forEach((q, i) => { if (!q.freed) { q.freed = true; g.freed[i] = true; g.saved = (g.saved || 0) + 1; } });
+  addScore(g, g.bonus, g.player.x, g.player.y - 24); g.height = 100; g.mode = 'clear'; g.timer = 2.5; g.cat.fallen = !!g.S.final; g.events.push('clear');
 }
 
 export function progress(g) {
   return { stage: g.loop * STAGES.length + g.stage + 1, height: Math.floor(g.height), timeMs: Math.round(g.runTime), score: g.score, saved: g.saved || 0 };
 }
+// stage progress 0-100: share of caged pups freed, plus how far the rescuer has climbed toward the next goal
 function trackHeight(g) {
-  const sy = surfaceY(g.plats[g.S.start.p], g.S.start.x), gy = g.pup.y;
-  const h = Math.max(0, Math.min(100, (sy - g.player.y) / (sy - gy) * 100));
+  const st = at(g, g.S.start), n = g.pups.length + (g.exit ? 1 : 0), done = g.pups.filter(q => q.freed).length;
+  const goal = g.pups.find(q => !q.freed) || g.exit; if (!goal) return;
+  const prev = done === 0 ? st : (g.pups.filter(q => q.freed).slice(-1)[0]);
+  const dd = Math.hypot(goal.x - prev.x, goal.y - prev.y) || 1, left = Math.hypot(goal.x - g.player.x, goal.y - g.player.y);
+  const h = Math.max(0, Math.min(99, (done + Math.max(0, Math.min(1, 1 - left / dd))) / n * 100));
   if (h > g.height) g.height = h;
 }
 export function step(g, inp = {}) {
@@ -316,20 +347,14 @@ export function step(g, inp = {}) {
   if (g.mode !== 'play') return;
   g.t += DT; updateLifts(g);
   g.bonusClock += DT; if (g.bonusClock >= 2) { g.bonusClock -= 2; g.bonus = Math.max(0, g.bonus - 100); if (g.bonus === 0) { killPlayer(g, 'time'); return; } }
-  // conveyors reverse periodically
-  g.convT += DT; if (g.convT > 6) { g.convT = 0; for (const pl of g.plats) if (pl.conv && g.rng() < 0.5) pl.conv = -pl.conv; }
-  g.cat.throwT = Math.max(0, g.cat.throwT - DT);
+  stepCat(g);
   g.spawnT -= DT;
-  if (g.spawnT <= 0) { spawnHazard(g); const base = g.S.hazard === 'tin' ? 1.6 : 2.2; g.spawnT = Math.max(0.9, base - 0.25 * g.loop) + g.rng() * 1.0; }
-  if (g.S.hazard !== 'yarn') { g.fleaT -= DT; if (g.fleaT <= 0) { g.fleaT = 5 - Math.min(2, g.loop); spawnFlea(g, g.bowl.x + 10, g.bowl.y); } }
+  if (g.spawnT <= 0) { spawnHazard(g); g.spawnT = Math.max(1.0, g.S.spawn - 0.3 * g.loop) + g.rng() * 1.0; }
+  if (g.S.fleaSpots.length) { g.fleaT -= DT; if (g.fleaT <= 0) { g.fleaT = 6 - Math.min(2, g.loop); const s = g.S.fleaSpots[Math.floor(g.rng() * g.S.fleaSpots.length)]; const q = at(g, s); spawnFlea(g, q.x, q.y); } }
   stepPlayer(g, inp); trackHeight(g);
   if (g.mode !== 'play') return;
   for (const b of g.hazards) stepHazard(g, b);
-  g.hazards = g.hazards.filter(b => {
-    if (b.x < -12 || b.x > W + 12 || b.y > H + 12) return false;
-    if (g.S.hazard === 'yarn' && b.state === 'roll' && Math.abs(b.x - g.bowl.x) < 6 && Math.abs(b.y - g.bowl.y) < 4) { spawnFlea(g, g.bowl.x + 12, g.bowl.y); return false; }
-    return true;
-  });
-  for (const f of g.fleas) stepFlea(g, f);
+  g.hazards = g.hazards.filter(b => !b.dead && b.x > -12 && b.x < W + 12 && b.y < H + 12);
+  for (const f of g.fleas) stepFlea(g, f); g.fleas = g.fleas.filter(f => !f.dead);
   collisions(g);
 }

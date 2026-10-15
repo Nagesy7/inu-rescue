@@ -28,19 +28,19 @@ for (const n of [2, 3, 4]) {
   await page.goto(URL + '?stage=' + n); await page.waitForTimeout(400); await page.keyboard.press('Enter'); await waitMode('play');
   await hold('ArrowRight', 600); await page.waitForTimeout(3500); await shot(`0${5 + n}-stage${n}`); log.push(['stage' + n, await st()]);
 }
-// rivets: pull a rivet on level 1 with real input (ladder x=30 -> rivet x=72)
-await walkTo(30); await hold('ArrowUp', 1300); await walkTo(76); await shot('10-rivet-pulled'); log.push(['rivet', await st()]);
+// DOG PARK: open the first kennel with real input (ladder x=30 -> kennel x=14)
+await walkTo(30); await hold('ArrowUp', 1900); await walkTo(14); await shot('10-kennel-opened'); log.push(['kennel', await st(), await page.evaluate(() => window.__inu.g.saved)]);
 
-// game over flow: from stage 1, climb to girder 2 and walk off the edge 3 times
-await page.goto(URL + '?stage=1'); await page.waitForTimeout(400); await page.keyboard.press('Enter');
+// game over flow: on the rooftops, walk off roof 1 into the street gap 3 times
+await page.goto(URL + '?stage=2'); await page.waitForTimeout(400); await page.keyboard.press('Enter');
 for (let life = 0; life < 3; life++) {
-  await waitMode('play'); await walkTo(110); await hold('ArrowUp', 1300); await hold('ArrowRight', 2600);
+  await waitMode('play'); await hold('ArrowRight', 2600);
   await page.waitForTimeout(1900); log.push(['death ' + life, await st()]);
 }
 await page.waitForTimeout(500); await shot('11-initials');
 await page.keyboard.press('Enter'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter'); await page.waitForTimeout(400);
 await shot('12-gameover-leaderboard');
-log.push(['lb', await page.evaluate(() => localStorage.getItem('inu-rescue.leaderboard.v1'))]);
+log.push(['lb', await page.evaluate(() => localStorage.getItem('inu-rescue.leaderboard.v2'))]);
 
 // touch controls on a phone viewport
 const m = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });

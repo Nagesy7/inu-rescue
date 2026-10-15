@@ -117,7 +117,7 @@ function endGame() {
 }
 
 // haptics on touch phones (no-op elsewhere)
-const BUZZ = { die: [60, 40, 90], clear: [30, 30, 30, 30, 60], hammer: 25, extralife: [20, 20, 20] };
+const BUZZ = { die: [60, 40, 90], pup: [20, 30, 20], clear: [30, 30, 30, 30, 60], hammer: 25, extralife: [20, 20, 20] };
 function buzz(ev) { if (BUZZ[ev] && !isMuted() && !root.classList.contains('notouch')) try { navigator.vibrate?.(BUZZ[ev]); } catch {} }
 let acc = 0, last = performance.now();
 function frame(now) {

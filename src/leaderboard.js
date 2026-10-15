@@ -1,6 +1,6 @@
-// Inu Rescue leaderboard data model. Ranked by furthest progress (stage, then height %),
+// Inu Rescue leaderboard data model (v2: remixed stages; 'height' = stage progress % toward the pup(s) and exit). Ranked by furthest progress (stage, then progress %),
 // tie-broken by fastest run time. Shared shape so Inu Verse can render it later.
-export const LB_KEY = 'inu-rescue.leaderboard.v1';
+export const LB_KEY = 'inu-rescue.leaderboard.v2';
 export const LB_MAX = 10;
 /** @typedef {{name:string, stage:number, height:number, timeMs:number, score:number, date:string}} LeaderboardEntry */
 

@@ -1,7 +1,7 @@
 // Inu Verse-style sprite art (art/*.png, see art/manifest.json). Visual only; procedural art is the fallback until images load.
 const BASE = typeof document !== 'undefined' ? new URL('../art/', import.meta.url) : null;
 const I = {};
-const NAMES = ['background', 'bone', 'cat_sheet', 'conveyor_sheet', 'girder_sheet', 'ladder_sheet', 'hazard_ball', 'hazard_kibble', 'hazard_tin', 'hazard_yarn', 'hero_sheet', 'pup_sheet'];
+const NAMES = ['background', 'bone', 'cat_sheet', 'hazard_tin', 'hazard_yarn', 'hero_sheet', 'pup_sheet'];
 if (BASE && typeof Image !== 'undefined') for (const n of NAMES) { const i = new Image(); i.src = new URL(n + '.png', BASE).href; I[n] = i; }
 export const has = n => { const i = I[n]; return !!(i && i.complete && i.naturalWidth); };
 // draw frame f (fw x fh) of sheet n at (x, y), optionally mirrored (all art faces right)
