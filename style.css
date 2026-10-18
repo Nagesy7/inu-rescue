@@ -46,6 +46,15 @@ html.joy #stick{display:block}html.joy .dpad{display:none}
 #settings small{color:#aaa}#settings button{align-self:flex-end;background:#222a44;color:#f0c840;border:1px solid #f0c840;border-radius:6px;padding:5px 12px;font:bold 12px monospace}
 /* phone landscape: the shared wallet pill + home button (kibble-pay) stack in the right gutter, START/PAUSE sit below them
    (they used to cover START, so a START tap hit the home button and left the game) */
+
+/* settings: sound rows everywhere; joystick row only on touch devices (no touch pad on desktop) */
+html.notouch #settings .joyrow{display:none}
+#settings .joyrow{display:flex;flex-direction:column;gap:4px}#settings .vol input{width:120px;height:22px}#settings kbd{color:#888;font-size:10px}
+/* phone landscape, decluttered right gutter: wallet pill on top; one compact row below it with home + START/PAUSE icons; JUMP below */
 @media (orientation:landscape) and (max-height:540px) and ((pointer:coarse) or (hover:none)){
-  #inu-wallet{flex-direction:column!important;align-items:flex-end!important}
-  .mid{top:calc(max(10px,env(safe-area-inset-top)) + 98px)!important;gap:8px!important}}
+  .mid{flex-direction:row!important;top:calc(max(6px,env(safe-area-inset-top)) + 52px)!important;gap:6px!important}
+  .mid .sm{width:44px;height:36px}.mid .sm::after{font-size:15px}
+  .mid [data-k=start]::after{content:"\25B6"}.mid [data-k=pause]::after{content:"\275A\275A";font-size:12px;letter-spacing:-2px}
+  #inu-home{position:fixed!important;top:calc(max(6px,env(safe-area-inset-top)) + 52px)!important;right:calc(max(10px,env(safe-area-inset-right)) + 100px)!important;left:auto!important;
+    width:36px!important;height:36px!important;min-width:0!important;min-height:0!important;padding:0!important;font-size:17px!important;line-height:1!important;box-sizing:border-box!important}}
+html:not(.notouch) #settings kbd{display:none}

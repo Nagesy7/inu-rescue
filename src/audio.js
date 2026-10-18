@@ -1,16 +1,17 @@
 // Tiny WebAudio sfx synth (no assets).
-let ac = null, muted = false;
-export function initAudio() { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended' && !document.hidden) ac.resume(); } catch { ac = null; } } // one context, resumed on gesture
+let ac = null, muted = false, master = null, volume = 1; // master gain = settings volume (0..1)
+export function initAudio() { try { if (!ac) { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = volume; master.connect(ac.destination); } if (ac.state === 'suspended' && !document.hidden) ac.resume(); } catch { ac = null; } } // one context, resumed on gesture
 if (typeof document !== 'undefined') { document.addEventListener('visibilitychange', () => { if (!ac) return; if (document.hidden) ac.suspend?.(); else ac.resume?.(); }); addEventListener('pagehide', () => ac?.suspend?.()); }
 // one-shot limiter: per-SFX cooldown + max concurrent voices (events fire per sim step; bursts of the same event must not stack)
 const CD = { land: 0.08, bounce: 0.06, tin: 0.06, flea: 0.08, ladderroll: 0.1, cathop: 0.08, score: 0.05 }, lastAt = {}; let ends = [];
 export const MAX_VOICES = 8;
 export function gate(name, now, cd = CD[name] ?? 0.04, dur = 0.3) { ends = ends.filter((t) => t > now); if (ends.length >= MAX_VOICES || now - (lastAt[name] ?? -1e9) < cd) return false; lastAt[name] = now; ends.push(now + dur); return true; }
-export function setMuted(m) { muted = m; } export function isMuted() { return muted; }
+export function setMuted(m) { muted = !!m; } export function isMuted() { return muted; }
+export function setVolume(v) { volume = Math.max(0, Math.min(1, +v || 0)); if (master) master.gain.value = volume; } export function getVolume() { return volume; }
 function tone(f0, f1, dur, type = 'square', vol = 0.08, delay = 0) {
   if (!ac || muted) return; const t = ac.currentTime + delay, o = ac.createOscillator(), g = ac.createGain();
   o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
-  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + dur + 0.02);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); o.connect(g); g.connect(master || ac.destination); o.start(t); o.stop(t + dur + 0.02);
 }
 const seq = (notes, step = 0.1, type = 'square') => notes.forEach((n, i) => tone(n, n, step * 0.9, type, 0.07, i * step));
 const SFX = {
@@ -23,4 +24,4 @@ const SFX = {
   clank: () => tone(700, 140, 0.14, 'sawtooth', 0.07), split: () => seq([660, 440], 0.05),
   hammerend: () => tone(400, 200, 0.1), checkpoint: () => seq([659, 988], 0.07), ladderroll: () => tone(160, 110, 0.08, 'triangle', 0.04),
 };
-export function play(ev) { const f = SFX[ev]; if (f && ac && !muted && gate(ev, ac.currentTime)) f(); }
+export function play(ev) { const f = SFX[ev]; if (f && ac && !muted && volume > 0 && gate(ev, ac.currentTime)) f(); }

@@ -8,7 +8,7 @@ test('joystick setting is OFF by default (missing, empty, corrupt or non-boolean
 test('joystick setting persists in the cloud-synced key and keeps other fields', () => {
   assert.ok(SETTINGS_KEY.startsWith('inu-rescue.'), 'covered by the wallet cloud-save key prefix');
   const st = mem({ [SETTINGS_KEY]: '{"other":7}' }); saveSettings(st, { joystick: true });
-  assert.deepEqual(JSON.parse(st.s[SETTINGS_KEY]), { other: 7, joystick: true }); assert.equal(loadSettings(st).joystick, true);
+  assert.deepEqual(JSON.parse(st.s[SETTINGS_KEY]), { other: 7, joystick: true, muted: false, volume: 100 }); assert.equal(loadSettings(st).joystick, true);
   saveSettings(st, { joystick: false }); assert.equal(loadSettings(st).joystick, false); assert.equal(JSON.parse(st.s[SETTINGS_KEY]).other, 7);
 });
 test('stick mapping: dead zone, 8 directions, ladders via up/down', () => {
@@ -21,4 +21,13 @@ test('stick mapping: dead zone, 8 directions, ladders via up/down', () => {
   assert.equal(on(stickToKeys(500, 0, r)), 'right', 'beyond the ring still counts');
   assert.equal(on(stickToKeys(5, 5, 0)), 'none');
   const o = knobOffset(300, 400, 50); assert.ok(Math.abs(Math.hypot(o.x, o.y) - 50) < 1e-9); assert.deepEqual(knobOffset(3, 4, 50), { x: 3, y: 4 });
+});
+test('sound settings: default on at full volume, persisted alongside joystick, clamped and corrupt-safe', () => {
+  assert.equal(DEFAULTS.muted, false); assert.equal(DEFAULTS.volume, 100);
+  assert.deepEqual(loadSettings(mem({ [SETTINGS_KEY]: '{"joystick":true}' })), { joystick: true, muted: false, volume: 100 }, 'old saves (joystick only) load with sound unchanged');
+  for (const [raw, v] of [['{"volume":40}', 40], ['{"volume":250}', 100], ['{"volume":-3}', 0], ['{"volume":"x"}', 100], ['{"volume":null}', 100], ['{"volume":33.4}', 33]]) assert.equal(loadSettings(mem({ [SETTINGS_KEY]: raw })).volume, v, raw);
+  assert.equal(loadSettings(mem({ [SETTINGS_KEY]: '{"muted":"yes"}' })).muted, false);
+  const st = mem(); saveSettings(st, { joystick: true, muted: true, volume: 30 });
+  assert.deepEqual(loadSettings(st), { joystick: true, muted: true, volume: 30 });
+  saveSettings(st, { ...loadSettings(st), muted: false }); assert.deepEqual(loadSettings(st), { joystick: true, muted: false, volume: 30 }, 'unmuting keeps the chosen volume and joystick');
 });

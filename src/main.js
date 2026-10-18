@@ -1,6 +1,6 @@
 import { createGame, step, progress, W, H } from './engine.js';
 import { drawGame, drawTitle, text } from './render.js';
-import { initAudio, play, setMuted, isMuted } from './audio.js';
+import { initAudio, play, setMuted, isMuted, setVolume } from './audio.js';
 import * as KB from './kibble.js';
 import { loadSettings, saveSettings, stickToKeys, knobOffset } from './settings.js';
 import { loadLB, saveLB, addEntry, makeEntry, qualifiesLB, describe, formatTime } from './leaderboard.js';
@@ -27,7 +27,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Space' || e.code === 'KeyZ' || e.code === 'KeyX') { if (!e.repeat) jumpEdge = true; e.preventDefault(); }
   if (e.code === 'Enter') startEdge = true;
   if ((e.code === 'KeyP' || e.code === 'Escape') && app.scene === 'game') app.paused = !app.paused;
-  if (e.code === 'KeyM') setMuted(!isMuted());
+  if (e.code === 'KeyM') setSound({ muted: !isMuted() });
   if (app.scene === 'entry') entryKey(e.code);
 });
 addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = false; });
@@ -75,7 +75,10 @@ pad.addEventListener('pointerleave', e => { if (!pad.hasPointerCapture?.(e.point
 // JUMP/START/PAUSE buttons work at the same time (multi-touch). The D-pad path above is untouched when it's off.
 const stick = document.getElementById('stick'), knob = stick.querySelector('.knob');
 let settings = loadSettings(localStorage), stickId = null; const stickKeys = { left: false, right: false, up: false, down: false };
-function applySettings() { root.classList.toggle('joy', settings.joystick); const cb = document.getElementById('set-joy'); if (cb) cb.checked = settings.joystick; stickEnd(); }
+function applySettings() { root.classList.toggle('joy', settings.joystick); const $ = id => document.getElementById(id);
+  $('set-joy').checked = settings.joystick; $('set-mute').checked = settings.muted; $('set-vol').value = settings.volume; $('set-vol-v').textContent = settings.volume + '%';
+  setMuted(settings.muted); setVolume(settings.volume / 100); stickEnd(); }
+function setSound(ch) { settings = { ...settings, ...ch }; saveSettings(localStorage, settings); applySettings(); KB.K.walletUi?.save?.(); }
 function stickSet(k) {
   for (const d of ['left', 'right', 'up', 'down']) { if (k[d] === stickKeys[d]) continue; stickKeys[d] = k[d]; keys[d] = k[d];
     if (k[d] && app.scene === 'entry') entryKey({ left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown' }[d]); }
@@ -95,6 +98,8 @@ addEventListener('blur', stickEnd); document.addEventListener('visibilitychange'
 const setBox = document.getElementById('settings'); let pausedBySettings = false;
 document.getElementById('k-set').onclick = () => { if (app.scene === 'game' && !app.paused) { app.paused = true; pausedBySettings = true; } applySettings(); setBox.hidden = false; };
 document.getElementById('set-joy').onchange = e => { settings = { ...settings, joystick: e.target.checked }; saveSettings(localStorage, settings); applySettings(); KB.K.walletUi?.save?.(); };
+document.getElementById('set-mute').onchange = e => setSound({ muted: e.target.checked });
+document.getElementById('set-vol').oninput = e => { setSound({ volume: +e.target.value, muted: false }); initAudio(); play('toy'); };
 document.getElementById('set-close').onclick = () => { setBox.hidden = true; if (pausedBySettings) { app.paused = false; pausedBySettings = false; } };
 for (const t of ['pointerdown', 'touchstart']) setBox.addEventListener(t, e => e.stopPropagation(), { passive: true });
 applySettings(); app.settings = () => settings;
