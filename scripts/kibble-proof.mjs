@@ -6,7 +6,7 @@ const inter = (a, c) => a && c && a.x < c.x + c.width && c.x < a.x + a.width && 
 for (const [tag, opts] of [['desktop', { viewport: { width: 1280, height: 800 } }], ['iphone', devices['iPhone 13 landscape']]]) {
   const ctx = await b.newContext(opts), p = await ctx.newPage(), posts = []; p.on('pageerror', (e) => errs.push(tag + ': ' + e.message));
   const deep = []; await p.route(/^https:\/\/phantom\.(app|com)\/ul\//, (r) => { deep.push(r.request().url()); r.abort(); }); // phone: Buy without a wallet deep-links into the Phantom app (aborted here; the demo step reloads the game)
-  p.on('request', (r) => { if (r.method() !== 'GET' && r.method() !== 'HEAD' && r.method() !== 'OPTIONS') posts.push(r.method() + ' ' + r.url()); });
+  p.on('request', (r) => { if (!['GET', 'HEAD', 'OPTIONS'].includes(r.method()) && !/^https:\/\/vercel\.live\//.test(r.url())) posts.push(r.method() + ' ' + r.url()); });
   await p.goto(URL); await p.evaluate(() => localStorage.clear()); await p.reload();
   await p.waitForFunction(() => ['soon', 'live', 'offline'].includes(document.documentElement.dataset.kibble), null, { timeout: 20000 }).catch(() => {});
   const mode = await p.evaluate(() => document.documentElement.dataset.kibble); ok(mode === 'live', `${tag}: real mode = ${mode} ($KIBBLE is live)`);
