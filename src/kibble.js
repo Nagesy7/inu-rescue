@@ -40,7 +40,7 @@ async function bootKibble(onChange) {
     // Connect Wallet: cloud save (equipped gear + local bests) keyed by wallet; holder tier from on-chain $KIBBLE.
     const lb = (g) => { try { return JSON.parse(g('inu-rescue.leaderboard.v2') || '[]'); } catch { return []; } };
     K.glue.mountHome?.(); // 🏠 Back to Inu Verse (title/pause/results; confirms + saves via globalThis.__inuHome)
-    if (R.mode !== 'demo') K.walletUi = K.glue.mountWallet(R, { game: GAME, keys: ['inu-rescue.leaderboard.v2', 'ir.equip', 'inu-rescue.'], position: 'top-right',
+    if (R.mode !== 'demo') K.walletUi = K.glue.mountWallet(R, { game: GAME, keys: ['inu-rescue.leaderboard.v2', 'ir.equip', 'inu-rescue.settings', 'inu-rescue.'], position: 'top-right',
       progress: (g) => { const l = lb(g); return l.reduce((m, e) => Math.max(m, Number(e.score) || 0), 0) + l.length; },
       label: (g) => { const l = lb(g); return l.length ? `best ${l.reduce((m, e) => Math.max(m, Number(e.score) || 0), 0)} · ${l.length} runs` : ''; },
       onWallet: ({ tier }) => { K.tier = tier || null; refresh().then(onChange).catch(() => {}); } }); }

@@ -2,6 +2,7 @@ import { createGame, step, progress, W, H } from './engine.js';
 import { drawGame, drawTitle, text } from './render.js';
 import { initAudio, play, setMuted, isMuted } from './audio.js';
 import * as KB from './kibble.js';
+import { loadSettings, saveSettings, stickToKeys, knobOffset } from './settings.js';
 import { loadLB, saveLB, addEntry, makeEntry, qualifiesLB, describe, formatTime } from './leaderboard.js';
 
 const cv = document.getElementById('screen'), c = cv.getContext('2d');
@@ -70,6 +71,33 @@ pad.addEventListener('pointermove', e => {
 const up = e => { if (ptrs.has(e.pointerId)) { e.preventDefault(); setPtr(e.pointerId, undefined); } };
 for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(t, up);
 pad.addEventListener('pointerleave', e => { if (!pad.hasPointerCapture?.(e.pointerId)) up(e); });
+// ---- optional virtual joystick (Settings > Joystick controls, OFF by default). Own pointer tracking, so the stick and the
+// JUMP/START/PAUSE buttons work at the same time (multi-touch). The D-pad path above is untouched when it's off.
+const stick = document.getElementById('stick'), knob = stick.querySelector('.knob');
+let settings = loadSettings(localStorage), stickId = null; const stickKeys = { left: false, right: false, up: false, down: false };
+function applySettings() { root.classList.toggle('joy', settings.joystick); const cb = document.getElementById('set-joy'); if (cb) cb.checked = settings.joystick; stickEnd(); }
+function stickSet(k) {
+  for (const d of ['left', 'right', 'up', 'down']) { if (k[d] === stickKeys[d]) continue; stickKeys[d] = k[d]; keys[d] = k[d];
+    if (k[d] && app.scene === 'entry') entryKey({ left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown' }[d]); }
+}
+function stickMove(e) { const b = stick.getBoundingClientRect(), r = b.width / 2, dx = e.clientX - (b.left + r), dy = e.clientY - (b.top + r);
+  const o = knobOffset(dx, dy, r * 0.62); knob.style.transform = `translate(${o.x}px,${o.y}px)`; stickSet(stickToKeys(dx, dy, r)); }
+function stickEnd() { stickId = null; stick.classList.remove('on'); knob.style.transform = ''; stickSet({ left: false, right: false, up: false, down: false }); }
+stick.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'mouse' || !settings.joystick) return; e.stopPropagation(); e.preventDefault(); initAudio();
+  if (app.paused === 'blur') { app.paused = false; return; }
+  stickId = e.pointerId; try { stick.setPointerCapture(e.pointerId); } catch {} stick.classList.add('on'); stickMove(e);
+});
+stick.addEventListener('pointermove', e => { if (e.pointerId !== stickId) return; e.preventDefault(); e.stopPropagation(); stickMove(e); });
+for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) stick.addEventListener(t, e => { if (e.pointerId === stickId) stickEnd(); });
+addEventListener('blur', stickEnd); document.addEventListener('visibilitychange', () => { if (document.hidden) stickEnd(); });
+// settings panel (gear button in the top-left bar)
+const setBox = document.getElementById('settings'); let pausedBySettings = false;
+document.getElementById('k-set').onclick = () => { if (app.scene === 'game' && !app.paused) { app.paused = true; pausedBySettings = true; } applySettings(); setBox.hidden = false; };
+document.getElementById('set-joy').onchange = e => { settings = { ...settings, joystick: e.target.checked }; saveSettings(localStorage, settings); applySettings(); KB.K.walletUi?.save?.(); };
+document.getElementById('set-close').onclick = () => { setBox.hidden = true; if (pausedBySettings) { app.paused = false; pausedBySettings = false; } };
+for (const t of ['pointerdown', 'touchstart']) setBox.addEventListener(t, e => e.stopPropagation(), { passive: true });
+applySettings(); app.settings = () => settings;
 // block native touch gestures: selection, callout, double-tap zoom, scroll/bounce, pinch
 for (const t of ['touchstart', 'touchmove', 'touchend']) document.addEventListener(t, e => { if (e.cancelable && (e.target.closest?.('#pad, canvas') || t === 'touchmove' || e.touches.length > 1)) e.preventDefault(); }, { passive: false });
 for (const t of ['contextmenu', 'selectstart', 'dragstart', 'gesturestart', 'dblclick']) document.addEventListener(t, e => e.preventDefault());
@@ -140,7 +168,7 @@ function frame(now) {
 }
 function render() {
   const hi = lb.reduce((m, e) => Math.max(m, e.score), 0);
-  if (app.scene === 'title') return drawTitle(c, app.t, lb, describe, formatTime, lookNow, !root.classList.contains('notouch'));
+  if (app.scene === 'title') return drawTitle(c, app.t, lb, describe, formatTime, lookNow, !root.classList.contains('notouch') && (root.classList.contains('joy') ? 'joy' : true));
   drawGame(c, app.g, { hi, paused: app.paused, touch: !root.classList.contains('notouch'), look: lookNow });
   if (app.scene === 'entry' || app.scene === 'over') {
     c.fillStyle = '#000d'; c.fillRect(16, 48, W - 32, 150);
@@ -162,7 +190,7 @@ function render() {
 }
 requestAnimationFrame(frame);
 // live rotation/resize: reset scroll, drop stuck touches
-const relayout = () => { scrollTo(0, 0); for (const id of [...ptrs.keys()]) setPtr(id, undefined); document.documentElement.dataset.orient = innerWidth > innerHeight ? 'landscape' : 'portrait'; };
+const relayout = () => { scrollTo(0, 0); for (const id of [...ptrs.keys()]) setPtr(id, undefined); stickEnd(); document.documentElement.dataset.orient = innerWidth > innerHeight ? 'landscape' : 'portrait'; };
 addEventListener('resize', relayout); addEventListener('orientationchange', relayout); screen.orientation?.addEventListener?.('change', relayout); relayout();
 // 🏠 Back to Inu Verse hooks (kibble-pay mountHome): confirm mid-match, save first.
 globalThis.__inuHome = { busy: () => app.scene === 'game' && app.g && app.g.mode !== 'over' ? 'Leave this run and go back to Inu Verse? The current run ends (your best score is kept).' : false };

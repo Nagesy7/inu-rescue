@@ -196,7 +196,7 @@ export function drawTitle(c, t, lb, describeFn, fmt, lk = {}, touch = false) {
   if (!lb.length) text(c, 'no runs yet', W / 2, 146, '#777', 'center', 7);
   lb.slice(0, 5).forEach((e, i) => text(c, `${i + 1}. ${e.name} S${e.stage} H${String(e.height).padStart(3)} ${fmt(e.timeMs)}`, 34, 144 + i * 10, i ? '#ccc' : '#f0c840', 'left', 7));
   if (Math.floor(t * 2) % 2 === 0) text(c, 'PRESS ENTER / TAP START', W / 2, 202, '#fff', 'center');
-  text(c, touch ? 'TAP JUMP TO START  D-PAD move  JUMP jump' : 'ARROWS/WASD move  SPACE jump  P pause', W / 2, 216, '#888', 'center', 6);
+  text(c, touch ? `TAP JUMP TO START  ${touch === 'joy' ? 'STICK' : 'D-PAD'} move  JUMP jump` : 'ARROWS/WASD move  SPACE jump  P pause', W / 2, 216, '#888', 'center', 6);
   text(c, 'an original Inu platform rescue', W / 2, 228, '#555', 'center', 6);
 }
 
