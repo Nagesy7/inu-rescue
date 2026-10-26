@@ -125,19 +125,26 @@ function entryKey(code) {
     app.lastEntry = e; app.entry = null; app.scene = 'over'; app.overT = 0;
   }
 }
-// ---- $KIBBLE bar (wallet sign-in + shared shop). DOM, outside the canvas; phone-landscape safe (top-left corner) ----
-const kbar = document.getElementById('kbar'), kwal = document.getElementById('k-wallet'), kmsg = document.getElementById('k-msg');
+// ---- $KIBBLE bar: Shop + Settings (Connect Wallet = shared #inu-wallet pill only; no duplicate Sign in) ----
+const kbar = document.getElementById('kbar'), kstat = document.getElementById('k-status'), kmsg = document.getElementById('k-msg');
 let lookNow = {};
 const relook = () => { lookNow = KB.look(); app.look = lookNow; };
 function kbarUi(msg) {
   const m = KB.K.mode; document.documentElement.dataset.kibble = m;
-  kwal.textContent = m === 'demo' ? 'DEMO' : KB.K.address ? KB.K.address.slice(0, 4) + '…' + KB.K.address.slice(-4) : 'Sign in';
+  // Status chip only for demo / loading / offline. Live signed-in chrome = #inu-wallet pill (replaces Connect Wallet immediately).
+  if (kstat) {
+    let label = '';
+    if (m === 'demo') label = 'DEMO';
+    else if (m === 'loading') label = 'Wallet…';
+    else if (m === 'offline' || m === 'soon') label = 'Wallet offline';
+    kstat.hidden = !label; kstat.textContent = label; kstat.dataset.mode = m || '';
+  }
   if (msg !== undefined) { kmsg.textContent = msg; clearTimeout(kbarUi.t); kbarUi.t = setTimeout(() => (kmsg.textContent = ''), 5000); }
   relook();
 }
-kwal.onclick = async () => { if (KB.K.mode === 'demo') return kbarUi('Demo mode: fake KIBBLE. Remove ?demo=1 to use Phantom.');
-  try { await KB.signIn(); kbarUi('Signed in: runs that save a pup post to the prize board.'); } catch (e) { kbarUi(e.message || 'Sign-in failed'); } };
-document.getElementById('k-shop').onclick = () => { app.paused = app.scene === 'game' ? true : app.paused; KB.openShop(() => kbarUi()); };
+document.getElementById('k-shop').onclick = async () => { const was = app.paused; app.paused = app.scene === 'game' ? true : app.paused;
+  await KB.openShop(() => kbarUi()).catch(() => null);
+  if (!KB.K.glue) { app.paused = was; kbarUi(KB.SOON_MSG); } }; // wallet service unreachable: say so and resume, never a silent paused game
 for (const t of ['pointerdown', 'touchstart']) kbar.addEventListener(t, (e) => e.stopPropagation(), { passive: true });
 kbar.addEventListener('click', () => setTimeout(() => document.activeElement?.blur?.(), 0));
 KB.initKibble({ onChange: () => kbarUi() }); kbarUi();
