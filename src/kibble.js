@@ -61,6 +61,7 @@ export async function openShop(onChange) {
 }
 // wallet-signed score: only when signed in (not demo), at least one pup saved
 export async function postRun(prog) {
+  if (K.mode !== 'demo' && !K.kp?.session) try { globalThis.InuProfile?.gameOver?.({ score: runScore(prog) }); } catch {} // guests: Hall of Fame prompt (kibble-pay /inu-profile.js)
   if (K.mode === 'demo' || !K.kp?.session || !(prog.saved > 0)) return { ok: false, skipped: true };
   try { return await K.kp.submitScore(GAME, runScore(prog), prog.timeMs, { v: SCORE_VERSION }); } catch (e) { return { ok: false, reason: e.message }; }
 }
