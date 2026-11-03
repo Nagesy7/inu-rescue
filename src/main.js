@@ -8,6 +8,7 @@ import { buildFeed, fetchBoard } from './feed.js';
 import * as KB from './kibble.js';
 import { loadSettings, saveSettings, stickToKeys, knobOffset, loadFx, saveFx, lowEndDevice, effectiveReduced } from './settings.js';
 import { loadLB, saveLB, addEntry, makeEntry, qualifiesLB, describe, formatTime } from './leaderboard.js';
+import { FROM, NUDGE_TEXT, NUDGE_VISIT, NUDGE_DISMISS, SHOP_RESULTS_URL, trackPaidLink, shouldNudge, markNudged } from './shop.js';
 
 const cv = document.getElementById('screen'), c = cv.getContext('2d');
 cv.width = W; cv.height = H; c.imageSmoothingEnabled = false;
@@ -119,6 +120,8 @@ document.getElementById('set-fx').onchange = e => setFx({ reduced: e.target.chec
 document.getElementById('set-close').onclick = () => { setBox.hidden = true; app.settingsOpen = false; padFocus(-1); if (pausedBySettings) { app.paused = false; pausedBySettings = false; } };
 for (const t of ['pointerdown', 'touchstart']) setBox.addEventListener(t, e => e.stopPropagation(), { passive: true });
 applySettings(); app.settings = () => settings;
+// optional cosmetics link (last row of the settings panel): plain new-tab link, analytics props are product/from/site only
+document.getElementById('set-shop').addEventListener('click', () => trackPaidLink(window, 'shop', FROM.menu));
 // ---- game controllers (Gamepad API): polled once per frame in the game loop; hot-plug via events + polling diff
 const pads = createPads(() => navigator.getGamepads?.() || []); app.pads = pads; app.padMenuI = 0; app.padToast = null;
 addEventListener('gamepadconnected', e => pads.connected(e)); addEventListener('gamepaddisconnected', e => pads.disconnected(e));
@@ -172,6 +175,7 @@ function padFrame(dt) {
   if (document.hidden) { padHeld = {}; return; }
   const r = pads.poll(dt); if (!r.count && !r.events.length) { padHeld = {}; return; }
   if (r.anyPress) initAudio();
+  if (!nudgeEl.hidden && r.pressed?.b) hideNudge(); // gamepad B / Circle dismisses the results nudge
   const res = applyPad(app, r, padAct); if (res.jump) jumpEdge = true;
   padHeld = app.settingsOpen || app.scene !== 'game' ? {} : r.held;
 }
@@ -231,6 +235,27 @@ function endGame() {
   else { app.scene = 'over'; app.overT = 0; app.lastEntry = null; }
 }
 
+// ---- results nudge: run-end (GAME OVER) screen only, at most once per session (sessionStorage 'inu.shopNudge'), never on the
+// daily-challenge screens. A small DOM card parked over the bottom strip of the canvas (below PRESS ENTER), so it never covers
+// the HUD, touch controls, wallet pill or home button. Dismiss: 'Not now', Esc, gamepad B, or continuing (ENTER / A / tap).
+const nudgeEl = document.createElement('div'); nudgeEl.id = 'shop-nudge'; nudgeEl.hidden = true; nudgeEl.setAttribute('role', 'dialog'); nudgeEl.setAttribute('aria-label', 'Kibble Pay shop');
+nudgeEl.innerHTML = `<p></p><div class="row"><a id="nudge-visit" target="_blank" rel="noopener"></a><button id="nudge-close" type="button"></button></div>`;
+nudgeEl.querySelector('p').textContent = NUDGE_TEXT; const nVisit = nudgeEl.querySelector('#nudge-visit'), nClose = nudgeEl.querySelector('#nudge-close');
+nVisit.textContent = NUDGE_VISIT; nVisit.href = SHOP_RESULTS_URL; nClose.textContent = NUDGE_DISMISS; document.body.appendChild(nudgeEl);
+for (const t of ['pointerdown', 'touchstart']) nudgeEl.addEventListener(t, e => e.stopPropagation(), { passive: true });
+const hideNudge = () => { nudgeEl.hidden = true; };
+nVisit.addEventListener('click', () => { trackPaidLink(window, 'shop', FROM.results); hideNudge(); });
+nClose.addEventListener('click', e => { e.preventDefault(); hideNudge(); });
+addEventListener('keydown', e => { if (!nudgeEl.hidden && e.code === 'Escape') { hideNudge(); e.preventDefault(); } });
+function placeNudge() { const r = cv.getBoundingClientRect(), w = Math.min(r.width - 12, 380); nudgeEl.style.width = Math.round(w) + 'px';
+  nudgeEl.style.left = Math.round(r.left + (r.width - w) / 2) + 'px'; nudgeEl.style.top = Math.round(r.bottom - nudgeEl.offsetHeight - Math.max(4, r.height * 0.01)) + 'px'; }
+function nudgeFrame() {
+  if (app.scene !== 'over') { if (!nudgeEl.hidden) hideNudge(); return; }
+  if (nudgeEl.hidden && app.overT > 0.6 && !app.nudgeDone && shouldNudge(sessionStorage, app.scene)) { markNudged(sessionStorage); app.nudgeDone = true; nudgeEl.hidden = false; }
+  if (!nudgeEl.hidden) placeNudge();
+}
+app.nudge = () => !nudgeEl.hidden;
+
 // haptics on touch phones (no-op elsewhere)
 const BUZZ = { die: [60, 40, 90], pup: [20, 30, 20], clear: [30, 30, 30, 30, 60], hammer: 25, extralife: [20, 20, 20] };
 function buzz(ev) { if (BUZZ[ev] && !isMuted() && !root.classList.contains('notouch')) try { navigator.vibrate?.(BUZZ[ev]); } catch {} }
@@ -253,7 +278,7 @@ function frame(now) {
   } else if (app.scene === 'over') { app.overT += dt; if (app.overT > 1 && (startEdge || jumpEdge)) { app.scene = 'title'; recalcFeed(); refreshFeed(true); } }
   else acc = 0;
   startEdge = false; if (app.scene !== 'game') jumpEdge = false;
-  ambientFrame(dt); render(); requestAnimationFrame(frame);
+  nudgeFrame(); ambientFrame(dt); render(); requestAnimationFrame(frame);
 }
 // ---- ambient: scene per stage, frozen while paused; frames only run while the tab is visible (rAF), audio context suspended when hidden
 let ema = 1 / 60, slowFor = 0;
