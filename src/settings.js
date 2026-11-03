@@ -27,3 +27,17 @@ export function stickToKeys(dx, dy, r, o = STICK) {
 }
 // clamp the drawn knob to the ring
 export function knobOffset(dx, dy, r) { const m = Math.hypot(dx, dy); return m <= r ? { x: dx, y: dy } : { x: dx / m * r, y: dy / m * r }; }
+// Effects + music (own key so the sound/joystick record keeps its shape). reduced: null = auto (low-end device or
+// prefers-reduced-motion, or sustained slow frames), true/false = the player's choice in the gear panel. Cloud-synced via the prefix.
+export const FX_KEY = 'inu-rescue.fx';
+export const FX_DEFAULTS = Object.freeze({ reduced: null, music: true });
+export function loadFx(storage) {
+  try { const s = JSON.parse(storage?.getItem(FX_KEY) || '{}') || {}; return { reduced: typeof s.reduced === 'boolean' ? s.reduced : null, music: s.music !== false }; }
+  catch { return { ...FX_DEFAULTS }; }
+}
+export function saveFx(storage, fx) { try { storage.setItem(FX_KEY, JSON.stringify({ reduced: typeof fx.reduced === 'boolean' ? fx.reduced : null, music: fx.music !== false })); } catch {} }
+/** Low-end guess: few cores, little memory, data saver or reduced motion. */
+export function lowEndDevice(nav = {}, reduceMotion = false) {
+  return !!(reduceMotion || (nav.hardwareConcurrency && nav.hardwareConcurrency <= 2) || (nav.deviceMemory && nav.deviceMemory <= 2) || nav.connection?.saveData);
+}
+export const effectiveReduced = (fx, autoLow) => (typeof fx.reduced === 'boolean' ? fx.reduced : !!autoLow);

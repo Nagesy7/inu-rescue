@@ -1,6 +1,7 @@
 import { has, frame, HERO } from './art.js';
 import { W, H, surfaceY, ladderEnds, hammerZone, STAGES } from './engine.js';
 import { SPR, PAL, drawSprite } from './sprites.js';
+import { drawBack, drawTint, drawGlow, drawMid } from './ambient.js';
 const R = (c, x, y, w, h, col) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h); };
 export function text(c, s, x, y, col = '#fff', align = 'left', size = 8) {
   c.font = `bold ${size}px monospace`; c.textAlign = align; c.textBaseline = 'top';
@@ -107,8 +108,11 @@ export function drawGame(c, g, opts = {}) {
   const shk = g.mode === 'dying' && g.timer > 1.3 ? Math.round(Math.sin(g.timer * 90) * 2) : 0;
   c.save(); if (shk) c.translate(shk, 0);
   drawBackdrop(c, g, t);
+  const amb = opts.amb; // ambient life + time-of-day + weather: backdrop layer only, always under the playfield below
+  if (amb) { drawBack(c, amb); drawTint(c, amb); drawGlow(c, amb); }
   const theme = g.S.theme;
   if (theme === 'roof') for (const pl of [...g.plats].sort((a, b) => a.y1 - b.y1)) drawPlat(c, pl, th, t, 'body', theme);
+  if (amb) drawMid(c, amb);
   for (const pl of g.plats) drawPlat(c, pl, th, t, 0, theme);
   // rope ladders (original: knotted rope, not steel)
   for (const L of g.S.ladders) { const e = ladderEnds(g, L);
@@ -175,9 +179,10 @@ export function drawVan(c, x, y, col) { // rescue van skin (title screen garage)
   R(c, x + 4, y - 11, 14, 2, '#fff'); R(c, x + 10, y - 13, 2, 6, '#fff'); R(c, x + 6, y - 2, 6, 4, '#222'); R(c, x + 24, y - 2, 6, 4, '#222');
   R(c, x + 20, y - 22, 3, 2, Math.floor(Date.now() / 300) % 2 ? '#ff3a3a' : '#3a7aff');
 }
-export function drawTitle(c, t, lb, describeFn, fmt, lk = {}, touch = false) {
+export function drawTitle(c, t, lb, describeFn, fmt, lk = {}, touch = false, x = {}) {
   if (!frame(c, 'background', 0, W, H, 0, 0)) { R(c, 0, 0, W, H, '#0c0c1e');
   for (let i = 0; i < 40; i++) R(c, (i * 97) % W, (i * 53) % H, 1, 1, '#2a2a4a'); }
+  if (x.amb) { drawBack(c, x.amb); drawGlow(c, x.amb); }
   const bob = Math.round(Math.sin(t * 3) * 2);
   text(c, 'INU', W / 2 + 2, 14 + bob, '#8a2838', 'center', 28); text(c, 'INU', W / 2, 12 + bob, '#f0c840', 'center', 28);
   text(c, 'RESCUE', W / 2 + 2, 42 + bob, '#8a2838', 'center', 24); text(c, 'RESCUE', W / 2, 40 + bob, '#e05a6a', 'center', 24);
@@ -191,13 +196,24 @@ export function drawTitle(c, t, lb, describeFn, fmt, lk = {}, touch = false) {
   if (lk.van) drawVan(c, 200, 104, lk.van.color);
   if (lk.shiba) text(c, 'RESCUER: ' + String(lk.shiba.profile?.name || 'SHIBA').toUpperCase().slice(0, 12), W / 2, 70, '#7ae07a', 'center', 7);
   drawHazard(c, { kind: 'yarn', x: 140 + (t * 30) % 30, y: 104, r: 5, rot: t * 8 });
-  text(c, 'A grumpy cat stole the pup!', W / 2, 118, '#ddd', 'center', 7);
-  text(c, 'TOP RESCUERS', W / 2, 132, '#5ad0d8', 'center');
-  if (!lb.length) text(c, 'no runs yet', W / 2, 146, '#777', 'center', 7);
-  lb.slice(0, 5).forEach((e, i) => text(c, `${i + 1}. ${e.name} S${e.stage} H${String(e.height).padStart(3)} ${fmt(e.timeMs)}`, 34, 144 + i * 10, i ? '#ccc' : '#f0c840', 'left', 7));
+  // daily event (Sydney date): Bones bonus + look of the day
+  const ev = x.event;
+  if (ev) { R(c, 14, 112, W - 28, 20, '#000b'); R(c, 14, 112, W - 28, 1, '#f0c840');
+    text(c, `TODAY: ${ev.name}`, W / 2, 114, '#f0c840', 'center', 7); text(c, ev.blurb.toUpperCase(), W / 2, 123, '#ddd', 'center', 6); }
+  else text(c, 'A grumpy cat stole the pup!', W / 2, 118, '#ddd', 'center', 7);
+  // rotating board panel: this device's top rescuers + real activity (prize board today / recent local rescues) or 'BE THE FIRST TODAY'
+  const panels = [];
+  if (lb.length) panels.push({ id: 'local', title: 'TOP RESCUERS', rows: lb.slice(0, 5).map((e, i) => `${i + 1}. ${e.name} S${e.stage} H${String(e.height).padStart(3)} ${fmt(e.timeMs)}`) });
+  for (const p of x.feed || []) panels.push(p);
+  if (!panels.length) panels.push({ id: 'none', title: 'TOP RESCUERS', rows: [], empty: 'no runs yet' });
+  const pi = x.feedPage != null && panels.findIndex(p => p.id === x.feedPage) >= 0 ? panels.findIndex(p => p.id === x.feedPage) : Math.floor(t / 6) % panels.length, P = panels[pi];
+  text(c, P.title, W / 2, 134, '#5ad0d8', 'center', 7);
+  if (panels.length > 1) for (let i = 0; i < panels.length; i++) R(c, W / 2 - panels.length * 3 + i * 6, 142, 3, 1, i === pi ? '#5ad0d8' : '#444');
+  if (!P.rows.length) text(c, P.empty || '', W / 2, 152, P.id === 'empty' ? '#7ae07a' : '#777', 'center', 7);
+  P.rows.slice(0, 5).forEach((r, i) => text(c, r, P.id === 'local' ? 34 : W / 2, 146 + i * 10, i ? '#ccc' : '#f0c840', P.id === 'local' ? 'left' : 'center', 7));
   if (Math.floor(t * 2) % 2 === 0) text(c, 'PRESS ENTER / TAP START', W / 2, 202, '#fff', 'center');
   text(c, touch ? `TAP JUMP TO START  ${touch === 'joy' ? 'STICK' : 'D-PAD'} move  JUMP jump` : 'ARROWS/WASD move  SPACE jump  P pause', W / 2, 216, '#888', 'center', 6);
-  text(c, 'an original Inu platform rescue', W / 2, 228, '#555', 'center', 6);
+  text(c, x.bones != null ? `an original Inu rescue   BONES ${x.bones}` : 'an original Inu platform rescue', W / 2, 228, x.bones != null ? '#bbb' : '#555', 'center', 6);
 }
 
 let lastAnim = null, stillFrames = 99; export let heroFrame = 0;

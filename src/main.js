@@ -1,8 +1,11 @@
 import { createGame, step, progress, W, H } from './engine.js';
 import { drawGame, drawTitle, text } from './render.js';
-import { initAudio, play, setMuted, isMuted, setVolume } from './audio.js';
+import { initAudio, play, setMuted, isMuted, setVolume, setMusic, setAmbience, tickAmbience } from './audio.js';
+import { createAmbient, setScene, updateAmbient, counts } from './ambient.js';
+import { eventFor, sydneyDate, runConditions, awardBones, loadBones } from './daily.js';
+import { buildFeed, fetchBoard } from './feed.js';
 import * as KB from './kibble.js';
-import { loadSettings, saveSettings, stickToKeys, knobOffset } from './settings.js';
+import { loadSettings, saveSettings, stickToKeys, knobOffset, loadFx, saveFx, lowEndDevice, effectiveReduced } from './settings.js';
 import { loadLB, saveLB, addEntry, makeEntry, qualifiesLB, describe, formatTime } from './leaderboard.js';
 
 const cv = document.getElementById('screen'), c = cv.getContext('2d');
@@ -11,6 +14,10 @@ const params = new URLSearchParams(location.search);
 const startStage = Math.max(0, Math.min(3, (parseInt(params.get('stage'), 10) || 1) - 1));
 let lb = loadLB(localStorage);
 const app = { scene: 'title', g: null, paused: false, t: 0, entry: null, lastEntry: null };
+// ambient life / daily event / activity feed (visual + Bones only; never touches the engine or the prize score)
+app.event = eventFor(Date.now()); app.amb = createAmbient((Date.now() & 0xffff) || 3); app.feed = []; app.board = null; app.bones = 0;
+const OVER = { time: params.get('time'), weather: params.get('weather') }; // ?time=dawn|day|dusk|night ?weather=clear|rain|leaves (visual preview)
+app.feedPage = params.get('feed'); app.titleCond = () => ({ time: 'night', weather: {}, titleWeather: OVER.weather || Object.values(app.event.weather || {})[0] || 'clear', birds: app.event.birds || 1 });
 window.__inu = app; import("./render.js").then(m => Object.defineProperty(app, "heroFrame", { get: () => m.heroFrame }));
 
 // touch pad only on real touch devices; a desktop mouse never reaches PAUSE/START
@@ -75,7 +82,12 @@ pad.addEventListener('pointerleave', e => { if (!pad.hasPointerCapture?.(e.point
 // JUMP/START/PAUSE buttons work at the same time (multi-touch). The D-pad path above is untouched when it's off.
 const stick = document.getElementById('stick'), knob = stick.querySelector('.knob');
 let settings = loadSettings(localStorage), stickId = null; const stickKeys = { left: false, right: false, up: false, down: false };
-function applySettings() { root.classList.toggle('joy', settings.joystick); const $ = id => document.getElementById(id);
+let fx = loadFx(localStorage); const autoLow = lowEndDevice(navigator, matchMedia?.('(prefers-reduced-motion: reduce)').matches); app.autoLow = autoLow;
+app.reduced = () => effectiveReduced(fx, app.autoLow);
+function applyFx() { const $ = id => document.getElementById(id); $('set-music').checked = fx.music; $('set-fx').checked = app.reduced();
+  $('set-fx-auto').textContent = fx.reduced === null ? (app.reduced() ? 'Auto: on (low-end device or slow frames).' : 'Auto: off on this device.') : 'Your choice.'; setMusic(fx.music); }
+function setFx(ch) { fx = { ...fx, ...ch }; saveFx(localStorage, fx); applyFx(); KB.K.walletUi?.save?.(); }
+function applySettings() { root.classList.toggle('joy', settings.joystick); const $ = id => document.getElementById(id); applyFx();
   $('set-joy').checked = settings.joystick; $('set-mute').checked = settings.muted; $('set-vol').value = settings.volume; $('set-vol-v').textContent = settings.volume + '%';
   setMuted(settings.muted); setVolume(settings.volume / 100); stickEnd(); }
 function setSound(ch) { settings = { ...settings, ...ch }; saveSettings(localStorage, settings); applySettings(); KB.K.walletUi?.save?.(); }
@@ -100,6 +112,8 @@ document.getElementById('k-set').onclick = () => { if (app.scene === 'game' && !
 document.getElementById('set-joy').onchange = e => { settings = { ...settings, joystick: e.target.checked }; saveSettings(localStorage, settings); applySettings(); KB.K.walletUi?.save?.(); };
 document.getElementById('set-mute').onchange = e => setSound({ muted: e.target.checked });
 document.getElementById('set-vol').oninput = e => { setSound({ volume: +e.target.value, muted: false }); initAudio(); play('toy'); };
+document.getElementById('set-music').onchange = e => setFx({ music: e.target.checked });
+document.getElementById('set-fx').onchange = e => setFx({ reduced: e.target.checked });
 document.getElementById('set-close').onclick = () => { setBox.hidden = true; if (pausedBySettings) { app.paused = false; pausedBySettings = false; } };
 for (const t of ['pointerdown', 'touchstart']) setBox.addEventListener(t, e => e.stopPropagation(), { passive: true });
 applySettings(); app.settings = () => settings;
@@ -149,9 +163,12 @@ for (const t of ['pointerdown', 'touchstart']) kbar.addEventListener(t, (e) => e
 kbar.addEventListener('click', () => setTimeout(() => document.activeElement?.blur?.(), 0));
 KB.initKibble({ onChange: () => kbarUi() }); kbarUi();
 async function postRun(prog) { const r = await KB.postRun(prog); app.posted = r.skipped ? null : r.ok ? `POSTED ${KB.runScore(prog)} TO PRIZE BOARD` : 'SCORE NOT POSTED: ' + String(r.reason || r.error || '').slice(0, 28).toUpperCase(); }
-function newGame() { app.g = createGame({ seed: (Date.now() & 0xffff) || 7, stage: startStage }); app.scene = 'game'; app.paused = false; }
+function newGame() { const seed = (Date.now() & 0xffff) || 7; app.g = createGame({ seed, stage: startStage }); app.scene = 'game'; app.paused = false;
+  app.event = eventFor(Date.now()); app.runEvent = app.event; app.cond = runConditions(seed, app.runEvent, OVER); app.runPups = [0, 0, 0, 0]; app.lastSaved = 0; app.bonesGained = 0; }
+// Bones for the run: pups saved per stage x today's event bonus. Separate from the prize score (runScore) and the engine score.
+function grantBones() { const r = awardBones(localStorage, app.runPups || [0, 0, 0, 0], app.runEvent || app.event, sydneyDate()); app.bonesGained = r.gained; app.bones = r.state.bones; if (r.gained) KB.K.walletUi?.save?.(); }
 function endGame() {
-  const prog = progress(app.g); app.lastProg = prog; app.posted = null; postRun(prog);
+  const prog = progress(app.g); app.lastProg = prog; app.posted = null; postRun(prog); grantBones();
   if (qualifiesLB(lb, prog)) { app.scene = 'entry'; app.entry = { ch: [8, 13, 20].concat(Array(NAME_MAX - 3).fill(BLANK)), i: 0, prog }; }
   else { app.scene = 'over'; app.overT = 0; app.lastEntry = null; }
 }
@@ -171,22 +188,43 @@ function frame(now) {
     while (acc >= 1 / 60 - 1e-6) { acc = Math.max(0, acc - 1 / 60); nSteps++;
       step(app.g, { ...keys, jump: jumpEdge }); jumpEdge = false;
       for (const ev of app.g.events) { play(ev); buzz(ev); }
+      if ((app.g.saved || 0) > app.lastSaved) { app.runPups[app.g.stage % 4] += app.g.saved - app.lastSaved; app.lastSaved = app.g.saved; }
       if (app.g.mode === 'over') { endGame(); break; } }
     (window.__stepHist ||= {})[nSteps] = (window.__stepHist[nSteps] || 0) + 1; // jitter probe: sim steps per rendered frame
-  } else if (app.scene === 'over') { app.overT += dt; if (app.overT > 1 && (startEdge || jumpEdge)) app.scene = 'title'; }
+  } else if (app.scene === 'over') { app.overT += dt; if (app.overT > 1 && (startEdge || jumpEdge)) { app.scene = 'title'; recalcFeed(); refreshFeed(true); } }
   else acc = 0;
   startEdge = false; if (app.scene !== 'game') jumpEdge = false;
-  render(); requestAnimationFrame(frame);
+  ambientFrame(dt); render(); requestAnimationFrame(frame);
 }
+// ---- ambient: scene per stage, frozen while paused; frames only run while the tab is visible (rAF), audio context suspended when hidden
+let ema = 1 / 60, slowFor = 0;
+function ambientFrame(dt) {
+  if (dt > 0 && dt < 0.25) { ema += (dt - ema) * 0.05; slowFor = ema > 1 / 40 ? slowFor + dt : 0; if (slowFor > 3 && fx.reduced === null && !app.autoLow) { app.autoLow = true; applyFx(); } }
+  const inGame = app.scene !== 'title' && app.g, theme = inGame ? app.g.S.theme : 'title', cond = inGame ? app.cond : app.titleCond(), red = app.reduced();
+  const sig = theme + '|' + red + '|' + JSON.stringify(cond) + '|' + (inGame ? app.g.stage + ':' + app.g.loop : '');
+  if (sig !== app.ambSig) { app.ambSig = sig; setScene(app.amb, theme, cond, { reduced: red, plats: inGame ? app.g.plats : null }); }
+  if (!app.paused) updateAmbient(app.amb, dt);
+  setAmbience(theme, { rain: (theme === 'title' ? cond.titleWeather : cond.weather?.[theme]) === 'rain', night: inGame && cond.time === 'night', paused: !!app.paused || app.scene === 'over' || app.scene === 'entry' }); tickAmbience();
+}
+// ---- real-activity feed: kibble-pay daily board for inu-rescue@v2 + this device's runs today. Refreshed on the title only.
+let feedAt = -1e9;
+function refreshFeed(force) {
+  const now = Date.now(); if (document.hidden || (!force && now - feedAt < 90000)) return; feedAt = now;
+  fetchBoard().then(b => { app.board = b; recalcFeed(); });
+}
+function recalcFeed() { const today = sydneyDate(); app.event = app.scene === 'game' ? app.event : eventFor(Date.now()); app.feed = buildFeed({ board: app.board, lb, today }); app.bones = loadBones(localStorage, today).bones; }
+setInterval(() => { if (app.scene === 'title' && !document.hidden) { recalcFeed(); refreshFeed(); } }, 5000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && app.scene === 'title') refreshFeed(); });
+recalcFeed(); refreshFeed(true); app.counts = () => counts(app.amb);
 function render() {
   const hi = lb.reduce((m, e) => Math.max(m, e.score), 0);
-  if (app.scene === 'title') return drawTitle(c, app.t, lb, describe, formatTime, lookNow, !root.classList.contains('notouch') && (root.classList.contains('joy') ? 'joy' : true));
-  drawGame(c, app.g, { hi, paused: app.paused, touch: !root.classList.contains('notouch'), look: lookNow });
+  if (app.scene === 'title') return drawTitle(c, app.t, lb, describe, formatTime, lookNow, !root.classList.contains('notouch') && (root.classList.contains('joy') ? 'joy' : true), { amb: app.amb, event: app.event, feed: app.feed, feedPage: app.feedPage, bones: app.bones });
+  drawGame(c, app.g, { hi, paused: app.paused, touch: !root.classList.contains('notouch'), look: lookNow, amb: app.amb });
   if (app.scene === 'entry' || app.scene === 'over') {
     c.fillStyle = '#000d'; c.fillRect(16, 48, W - 32, 150);
     text(c, 'GAME OVER', W / 2, 54, '#e05a6a', 'center', 16);
     const pr = app.lastProg; text(c, describe(pr), W / 2, 76, '#f0c840', 'center', 7);
-    text(c, `score ${pr.score}  pups saved ${pr.saved || 0}`, W / 2, 86, '#ccc', 'center', 7);
+    text(c, `score ${pr.score}  pups saved ${pr.saved || 0}${app.bonesGained ? `  +${app.bonesGained} BONES` : ''}`, W / 2, 86, '#ccc', 'center', 7);
     if (app.posted) text(c, app.posted, W / 2, 93, '#7ae07a', 'center', 6);
     if (app.scene === 'entry') {
       text(c, 'NEW BEST RUN! ENTER INITIALS', W / 2, 102, '#7ae07a', 'center', 7);
