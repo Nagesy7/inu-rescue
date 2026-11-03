@@ -61,3 +61,4 @@ html.notouch #settings .joyrow{display:none}
 html:not(.notouch) #settings kbd{display:none}
 
 #settings .fxrow{display:flex;flex-direction:column;gap:2px}
+#settings .padfocus{outline:2px solid #5ad0d8;outline-offset:3px;border-radius:4px;background:#2a3a55}#settings button.padfocus{background:#f0c840;color:#1b1f33}

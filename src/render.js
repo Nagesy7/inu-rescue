@@ -2,6 +2,7 @@ import { has, frame, HERO } from './art.js';
 import { W, H, surfaceY, ladderEnds, hammerZone, STAGES } from './engine.js';
 import { SPR, PAL, drawSprite } from './sprites.js';
 import { drawBack, drawTint, drawGlow, drawMid } from './ambient.js';
+import { GLYPHS } from './gamepad.js';
 const R = (c, x, y, w, h, col) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h); };
 export function text(c, s, x, y, col = '#fff', align = 'left', size = 8) {
   c.font = `bold ${size}px monospace`; c.textAlign = align; c.textBaseline = 'top';
@@ -163,8 +164,46 @@ export function drawGame(c, g, opts = {}) {
   text(c, `PUPS ${g.pups.filter(q => q.freed).length}/${g.pups.length}`, 48, 15, '#f8a0c0', 'left', 6);
   if (g.mode === 'intro') { text(c, `STAGE ${g.loop * 4 + g.stage + 1}`, W / 2, 100, '#fff', 'center', 12); text(c, g.S.final ? 'OPEN ALL 3 KENNELS!' : 'FREE THE PUP, THEN REACH THE VAN!', W / 2, 116, '#f0c840', 'center', 7); }
   if (g.mode === 'clear') { text(c, 'STAGE CLEAR!', W / 2, 100, '#7ae07a', 'center', 14); text(c, `PUPS SAVED: ${g.saved || 1}`, W / 2, 118, '#ff8aa0', 'center', 8); }
-  if (opts.paused) { R(c, 0, 0, W, H, '#0008'); R(c, 32, 84, W - 64, 56, '#000d'); text(c, 'PAUSED', W / 2, 92, '#fff', 'center', 16);
-    text(c, opts.paused === 'blur' ? (opts.touch ? 'TAP OR PRESS ANY KEY TO RESUME' : 'CLICK OR PRESS ANY KEY TO RESUME') : (opts.touch ? 'TAP PAUSE TO RESUME' : 'P / ESC TO RESUME'), W / 2, 118, '#f0c840', 'center', 7); }
+  if (opts.paused) { const pm = opts.pad; R(c, 0, 0, W, H, '#0008'); R(c, 32, 80, W - 64, 64, '#000d');
+    text(c, opts.paused === 'pad' ? 'CONTROLLER OFF' : 'PAUSED', W / 2, 86, opts.paused === 'pad' ? '#f0c840' : '#fff', 'center', opts.paused === 'pad' ? 12 : 16);
+    if (opts.paused === 'pad') text(c, opts.touch ? 'RECONNECT, TAP OR PRESS ANY KEY' : 'RECONNECT, CLICK OR PRESS ANY KEY', W / 2, 110, '#ddd', 'center', 7);
+    else if (pm && opts.paused !== 'blur') { padMenu(c, pm.items, pm.i, 106); padHint(c, pm.brand, [['a', 'SELECT'], ['b', 'RESUME']], 130); }
+    else text(c, opts.paused === 'blur' ? (opts.touch ? 'TAP OR PRESS ANY KEY TO RESUME' : 'CLICK OR PRESS ANY KEY TO RESUME') : (opts.touch ? 'TAP PAUSE TO RESUME' : 'P / ESC TO RESUME'), W / 2, 118, '#f0c840', 'center', 7); }
+}
+// ---- controller UI: button glyphs drawn in code (plain shapes / letters, no logos), focus menus, connect toast
+export function drawGlyph(c, brand, btn, x, y) { // centred at x,y; returns width used
+  const G = GLYPHS[brand] || GLYPHS.generic, k = G[btn] || btn;
+  if (btn === 'start' || btn === 'select') { c.font = 'bold 5px monospace'; const w = Math.ceil(c.measureText(k).width) + 6;
+    R(c, x - w / 2, y - 4, w, 8, '#ddd'); R(c, x - w / 2 + 1, y - 3, w - 2, 6, '#222'); text(c, k, x, y - 3, '#fff', 'center', 5); return w; }
+  c.fillStyle = '#ddd'; c.beginPath(); c.arc(x, y, 5, 0, Math.PI * 2); c.fill(); c.fillStyle = '#222'; c.beginPath(); c.arc(x, y, 4, 0, Math.PI * 2); c.fill();
+  c.strokeStyle = '#fff'; c.lineWidth = 1; c.beginPath();
+  if (k === 'cross') { c.moveTo(x - 2, y - 2); c.lineTo(x + 2, y + 2); c.moveTo(x + 2, y - 2); c.lineTo(x - 2, y + 2); }
+  else if (k === 'circle') c.arc(x, y, 2.2, 0, Math.PI * 2);
+  else if (k === 'square') c.rect(x - 2, y - 2, 4, 4);
+  else if (k === 'triangle') { c.moveTo(x, y - 2.5); c.lineTo(x + 2.5, y + 2); c.lineTo(x - 2.5, y + 2); c.closePath(); }
+  else { text(c, k, x, y - 3.5, '#fff', 'center', 7); return 10; }
+  c.stroke(); return 10;
+}
+const glyphW = (c, brand, btn) => { if (btn !== 'start' && btn !== 'select') return 10; c.font = 'bold 5px monospace'; return Math.ceil(c.measureText((GLYPHS[brand] || GLYPHS.generic)[btn]).width) + 6; };
+export function padHint(c, brand, pairs, y) { // [[btn,label],...] centred row of glyph + label
+  const parts = pairs.map(([b, l]) => { const gw = glyphW(c, brand, b); c.font = 'bold 6px monospace'; return { b, l, gw, w: gw + 3 + c.measureText(l).width }; });
+  let x = Math.round(W / 2 - (parts.reduce((s, p) => s + p.w, 0) + (parts.length - 1) * 9) / 2);
+  for (const p of parts) { drawGlyph(c, brand, p.b, x + p.gw / 2, y + 3); text(c, p.l, x + p.gw + 3, y, '#bbb', 'left', 6); x += p.w + 9; }
+}
+export function padMenu(c, items, sel, y) { // horizontal focus menu: focused item boxed + yellow
+  c.font = 'bold 8px monospace'; const ws = items.map(s => c.measureText(s).width + 14), tot = ws.reduce((a, b) => a + b, 0) + (items.length - 1) * 8;
+  let x = W / 2 - tot / 2;
+  items.forEach((s, i) => { const f = i === sel; if (f) { R(c, x, y - 2, ws[i], 13, '#f0c840'); R(c, x + 1, y - 1, ws[i] - 2, 11, '#2a2410'); }
+    text(c, (f ? '> ' : '') + s, x + ws[i] / 2, y, f ? '#f0c840' : '#aaa', 'center', 8); x += ws[i] + 8; });
+}
+export function drawPadToast(c, toast, now) {
+  if (!toast) return; const age = now - toast.t; if (age < 0 || age > 2.8) return;
+  const a = age < 0.2 ? age / 0.2 : age > 2.4 ? (2.8 - age) / 0.4 : 1, G = GLYPHS[toast.brand] || GLYPHS.generic, onl = toast.type === 'connected';
+  c.save(); c.globalAlpha = Math.max(0, Math.min(1, a)); R(c, 40, 24, W - 80, 30, '#000e'); R(c, 40, 24, W - 80, 1, onl ? '#7ae07a' : '#e05a6a');
+  text(c, `${G.name} ${onl ? 'CONNECTED' : 'DISCONNECTED'}`, W / 2, 28, onl ? '#7ae07a' : '#e05a6a', 'center', 7);
+  if (onl) padHint(c, toast.brand, [['a', 'JUMP'], ['b', 'BACK'], ['start', 'PAUSE']], 41);
+  else text(c, 'GAME PAUSED  -  RECONNECT TO KEEP PLAYING', W / 2, 41, '#ccc', 'center', 6);
+  c.restore();
 }
 // cosmetic overlays (collar / gear) on the rescuer: pure pixels, no gameplay effect. Shared Shiba is 18x22, hero art 12x16.
 export function drawGear(c, lk, x, y, face = 1, shiba = false, back = false) {
@@ -211,8 +250,9 @@ export function drawTitle(c, t, lb, describeFn, fmt, lk = {}, touch = false, x =
   if (panels.length > 1) for (let i = 0; i < panels.length; i++) R(c, W / 2 - panels.length * 3 + i * 6, 142, 3, 1, i === pi ? '#5ad0d8' : '#444');
   if (!P.rows.length) text(c, P.empty || '', W / 2, 152, P.id === 'empty' ? '#7ae07a' : '#777', 'center', 7);
   P.rows.slice(0, 5).forEach((r, i) => text(c, r, P.id === 'local' ? 34 : W / 2, 146 + i * 10, i ? '#ccc' : '#f0c840', P.id === 'local' ? 'left' : 'center', 7));
-  if (Math.floor(t * 2) % 2 === 0) text(c, 'PRESS ENTER / TAP START', W / 2, 202, '#fff', 'center');
-  text(c, touch ? `TAP JUMP TO START  ${touch === 'joy' ? 'STICK' : 'D-PAD'} move  JUMP jump` : 'ARROWS/WASD move  SPACE jump  P pause', W / 2, 216, '#888', 'center', 6);
+  if (x.pad) { padMenu(c, ['START', 'SETTINGS'], x.pad.i, 200); padHint(c, x.pad.brand, [['a', 'SELECT'], ['y', 'SETTINGS'], ['start', 'START']], 215); }
+  else if (Math.floor(t * 2) % 2 === 0) text(c, 'PRESS ENTER / TAP START', W / 2, 202, '#fff', 'center');
+  if (!x.pad) text(c, touch ? `TAP JUMP TO START  ${touch === 'joy' ? 'STICK' : 'D-PAD'} move  JUMP jump` : 'ARROWS/WASD move  SPACE jump  P pause', W / 2, 216, '#888', 'center', 6);
   text(c, x.bones != null ? `an original Inu rescue   BONES ${x.bones}` : 'an original Inu platform rescue', W / 2, 228, x.bones != null ? '#bbb' : '#555', 'center', 6);
 }
 

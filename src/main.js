@@ -1,5 +1,6 @@
 import { createGame, step, progress, W, H } from './engine.js';
-import { drawGame, drawTitle, text } from './render.js';
+import { drawGame, drawTitle, text, drawPadToast, padHint } from './render.js';
+import { createPads, applyPad, PAUSE_MENU } from './gamepad.js';
 import { initAudio, play, setMuted, isMuted, setVolume, setMusic, setAmbience, tickAmbience } from './audio.js';
 import { createAmbient, setScene, updateAmbient, counts } from './ambient.js';
 import { eventFor, sydneyDate, runConditions, awardBones, loadBones } from './daily.js';
@@ -26,10 +27,11 @@ const hasTouch = () => ('ontouchstart' in window) || navigator.maxTouchPoints > 
 root.classList.toggle('notouch', !hasTouch());
 addEventListener('touchstart', () => root.classList.remove('notouch'), { once: true, passive: true });
 const keys = {}; let jumpEdge = false, startEdge = false;
+const softPaused = () => app.paused === 'blur' || app.paused === 'pad'; // auto-pauses: any key / tap / button resumes
 const KEYMAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down' };
 addEventListener('keydown', e => {
   initAudio();
-  if (app.paused === 'blur' && app.scene === 'game') { app.paused = false; e.preventDefault(); return; } // any key resumes after focus loss
+  if (softPaused() && app.scene === 'game') { app.paused = false; e.preventDefault(); return; } // any key resumes after focus loss / pad unplugged
   if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = true; e.preventDefault(); }
   if (e.code === 'Space' || e.code === 'KeyZ' || e.code === 'KeyX') { if (!e.repeat) jumpEdge = true; e.preventDefault(); }
   if (e.code === 'Enter') startEdge = true;
@@ -41,7 +43,7 @@ addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = fals
 const autoPause = () => { if (app.scene === 'game' && !app.paused && app.g?.mode !== 'over') { app.paused = 'blur'; for (const k in keys) keys[k] = false; } };
 addEventListener('blur', autoPause);
 document.addEventListener('visibilitychange', () => { if (document.hidden) autoPause(); });
-cv.addEventListener('pointerdown', () => { if (app.paused === 'blur') app.paused = false; });
+cv.addEventListener('pointerdown', () => { if (softPaused()) app.paused = false; });
 // touch buttons: pad-level pointer tracking (multi-touch + sliding between buttons)
 const pad = document.getElementById('pad');
 const ptrs = new Map(); // pointerId -> key
@@ -64,7 +66,7 @@ function setPtr(id, k) {
 }
 pad.addEventListener('pointerdown', e => {
   if (e.pointerType === 'mouse') return; // mouse clicks never press pad buttons
-  if (app.paused === 'blur') { app.paused = false; e.preventDefault(); return; } // first tap just resumes
+  if (softPaused()) { app.paused = false; e.preventDefault(); return; } // first tap just resumes
   const k = keyAt(e.clientX, e.clientY); if (!k) return;
   e.preventDefault(); try { pad.setPointerCapture(e.pointerId); } catch {}
   setPtr(e.pointerId, k);
@@ -100,7 +102,7 @@ function stickMove(e) { const b = stick.getBoundingClientRect(), r = b.width / 2
 function stickEnd() { stickId = null; stick.classList.remove('on'); knob.style.transform = ''; stickSet({ left: false, right: false, up: false, down: false }); }
 stick.addEventListener('pointerdown', e => {
   if (e.pointerType === 'mouse' || !settings.joystick) return; e.stopPropagation(); e.preventDefault(); initAudio();
-  if (app.paused === 'blur') { app.paused = false; return; }
+  if (softPaused()) { app.paused = false; return; }
   stickId = e.pointerId; try { stick.setPointerCapture(e.pointerId); } catch {} stick.classList.add('on'); stickMove(e);
 });
 stick.addEventListener('pointermove', e => { if (e.pointerId !== stickId) return; e.preventDefault(); e.stopPropagation(); stickMove(e); });
@@ -108,15 +110,43 @@ for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) stick.addE
 addEventListener('blur', stickEnd); document.addEventListener('visibilitychange', () => { if (document.hidden) stickEnd(); });
 // settings panel (gear button in the top-left bar)
 const setBox = document.getElementById('settings'); let pausedBySettings = false;
-document.getElementById('k-set').onclick = () => { if (app.scene === 'game' && !app.paused) { app.paused = true; pausedBySettings = true; } applySettings(); setBox.hidden = false; };
+document.getElementById('k-set').onclick = () => { if (app.scene === 'game' && !app.paused) { app.paused = true; pausedBySettings = true; } applySettings(); setBox.hidden = false; app.settingsOpen = true; };
 document.getElementById('set-joy').onchange = e => { settings = { ...settings, joystick: e.target.checked }; saveSettings(localStorage, settings); applySettings(); KB.K.walletUi?.save?.(); };
 document.getElementById('set-mute').onchange = e => setSound({ muted: e.target.checked });
 document.getElementById('set-vol').oninput = e => { setSound({ volume: +e.target.value, muted: false }); initAudio(); play('toy'); };
 document.getElementById('set-music').onchange = e => setFx({ music: e.target.checked });
 document.getElementById('set-fx').onchange = e => setFx({ reduced: e.target.checked });
-document.getElementById('set-close').onclick = () => { setBox.hidden = true; if (pausedBySettings) { app.paused = false; pausedBySettings = false; } };
+document.getElementById('set-close').onclick = () => { setBox.hidden = true; app.settingsOpen = false; padFocus(-1); if (pausedBySettings) { app.paused = false; pausedBySettings = false; } };
 for (const t of ['pointerdown', 'touchstart']) setBox.addEventListener(t, e => e.stopPropagation(), { passive: true });
 applySettings(); app.settings = () => settings;
+// ---- game controllers (Gamepad API): polled once per frame in the game loop; hot-plug via events + polling diff
+const pads = createPads(() => navigator.getGamepads?.() || []); app.pads = pads; app.padMenuI = 0; app.padToast = null;
+addEventListener('gamepadconnected', e => pads.connected(e)); addEventListener('gamepaddisconnected', e => pads.disconnected(e));
+let padHeld = {}, padI = -1;
+const focusables = () => [...setBox.querySelectorAll('input, button')].filter(el => el.offsetParent !== null && !el.disabled);
+function padFocus(i) { const els = focusables(); setBox.querySelectorAll('.padfocus').forEach(el => el.classList.remove('padfocus'));
+  padI = i < 0 ? -1 : (i + els.length) % els.length; const el = els[padI]; if (!el) return;
+  const box = el.closest('label') || el; box.classList.add('padfocus'); el.focus({ preventScroll: true }); box.scrollIntoView?.({ block: 'nearest' }); }
+const padAct = {
+  toast: ev => { app.padToast = { ...ev, t: app.t }; },
+  releaseAll: () => { for (const k in keys) keys[k] = false; padHeld = {}; },
+  toggleMute: () => setSound({ muted: !isMuted() }),
+  startGame: () => { initAudio(); newGame(); },
+  openSettings: () => { document.getElementById('k-set').click(); padFocus(0); },
+  closeSettings: () => document.getElementById('set-close').click(),
+  settingsMove: d => padFocus(padI < 0 ? 0 : padI + d),
+  settingsAdjust: d => { const el = focusables()[padI]; if (el?.type !== 'range') return; el.value = Math.max(+el.min, Math.min(+el.max, +el.value + d * (+el.step || 5))); el.dispatchEvent(new Event('input', { bubbles: true })); },
+  settingsActivate: () => { const el = focusables()[padI]; if (el && el.type !== 'range') el.click(); if (padI >= 0 && !setBox.hidden) padFocus(padI); },
+  entryKey: code => entryKey(code),
+  toTitle: () => { app.scene = 'title'; recalcFeed(); refreshFeed(true); },
+};
+function padFrame(dt) {
+  if (document.hidden) { padHeld = {}; return; }
+  const r = pads.poll(dt); if (!r.count && !r.events.length) { padHeld = {}; return; }
+  if (r.anyPress) initAudio();
+  const res = applyPad(app, r, padAct); if (res.jump) jumpEdge = true;
+  padHeld = app.settingsOpen || app.scene !== 'game' ? {} : r.held;
+}
 // block native touch gestures: selection, callout, double-tap zoom, scroll/bounce, pinch
 for (const t of ['touchstart', 'touchmove', 'touchend']) document.addEventListener(t, e => { if (e.cancelable && (e.target.closest?.('#pad, canvas') || t === 'touchmove' || e.touches.length > 1)) e.preventDefault(); }, { passive: false });
 for (const t of ['contextmenu', 'selectstart', 'dragstart', 'gesturestart', 'dblclick']) document.addEventListener(t, e => e.preventDefault());
@@ -182,11 +212,12 @@ export function snapDt(dt) { const k = Math.round(dt * 60); return k >= 1 && Mat
 let acc = 0, last = performance.now();
 function frame(now) {
   const dt = snapDt(Math.min(0.1, (now - last) / 1000)); last = now; app.t += dt;
+  padFrame(dt);
   if (app.scene === 'title') { if (startEdge || jumpEdge) newGame(); }
   else if (app.scene === 'game' && !app.paused) {
     acc += dt; let nSteps = 0;
     while (acc >= 1 / 60 - 1e-6) { acc = Math.max(0, acc - 1 / 60); nSteps++;
-      step(app.g, { ...keys, jump: jumpEdge }); jumpEdge = false;
+      step(app.g, { left: keys.left || !!padHeld.left, right: keys.right || !!padHeld.right, up: keys.up || !!padHeld.up, down: keys.down || !!padHeld.down, jump: jumpEdge }); jumpEdge = false;
       for (const ev of app.g.events) { play(ev); buzz(ev); }
       if ((app.g.saved || 0) > app.lastSaved) { app.runPups[app.g.stage % 4] += app.g.saved - app.lastSaved; app.lastSaved = app.g.saved; }
       if (app.g.mode === 'over') { endGame(); break; } }
@@ -216,10 +247,11 @@ function recalcFeed() { const today = sydneyDate(); app.event = app.scene === 'g
 setInterval(() => { if (app.scene === 'title' && !document.hidden) { recalcFeed(); refreshFeed(); } }, 5000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden && app.scene === 'title') refreshFeed(); });
 recalcFeed(); refreshFeed(true); app.counts = () => counts(app.amb);
-function render() {
+function render() { draw(); drawPadToast(c, app.padToast, app.t); }
+function draw() {
   const hi = lb.reduce((m, e) => Math.max(m, e.score), 0);
-  if (app.scene === 'title') return drawTitle(c, app.t, lb, describe, formatTime, lookNow, !root.classList.contains('notouch') && (root.classList.contains('joy') ? 'joy' : true), { amb: app.amb, event: app.event, feed: app.feed, feedPage: app.feedPage, bones: app.bones });
-  drawGame(c, app.g, { hi, paused: app.paused, touch: !root.classList.contains('notouch'), look: lookNow, amb: app.amb });
+  if (app.scene === 'title') return drawTitle(c, app.t, lb, describe, formatTime, lookNow, !root.classList.contains('notouch') && (root.classList.contains('joy') ? 'joy' : true), { amb: app.amb, event: app.event, feed: app.feed, feedPage: app.feedPage, bones: app.bones, pad: pads.count ? { i: app.padMenuI || 0, brand: pads.brand } : null });
+  drawGame(c, app.g, { hi, paused: app.paused, touch: !root.classList.contains('notouch'), look: lookNow, amb: app.amb, pad: pads.count ? { items: PAUSE_MENU, i: app.padMenuI || 0, brand: pads.brand } : null });
   if (app.scene === 'entry' || app.scene === 'over') {
     c.fillStyle = '#000d'; c.fillRect(16, 48, W - 32, 150);
     text(c, 'GAME OVER', W / 2, 54, '#e05a6a', 'center', 16);
@@ -230,11 +262,11 @@ function render() {
       text(c, 'NEW BEST RUN! ENTER INITIALS', W / 2, 102, '#7ae07a', 'center', 7);
       app.entry.ch.forEach((ch, i) => { const x = W / 2 - 3.5 * 22 + i * 22; text(c, ch === BLANK ? '_' : LET[ch], x, 116, i === app.entry.i ? '#fff' : '#888', 'center', 16);
         if (i === app.entry.i) { c.fillStyle = '#fff'; c.fillRect(x - 5, 134, 10, 1); } });
-      text(c, 'TYPE or UP/DOWN  ENTER next  ENTER on _ = done', W / 2, 142, '#888', 'center', 6);
+      if (pads.count) padHint(c, pads.brand, [['a', 'NEXT'], ['b', 'DELETE']], 142); else text(c, 'TYPE or UP/DOWN  ENTER next  ENTER on _ = done', W / 2, 142, '#888', 'center', 6);
     } else {
       text(c, 'LEADERBOARD (progress, then time)', W / 2, 100, '#5ad0d8', 'center', 7);
       lb.slice(0, 8).forEach((e, i) => text(c, `${String(i + 1).padStart(2)} ${e.name} S${e.stage} H${String(e.height).padStart(3)} ${formatTime(e.timeMs)}`, 40, 112 + i * 10, e === app.lastEntry ? '#f0c840' : '#ccc', 'left', 7));
-      if (app.overT > 1) text(c, 'PRESS ENTER', W / 2, 186, '#fff', 'center', 7);
+      if (app.overT > 1) { if (pads.count) padHint(c, pads.brand, [['a', 'CONTINUE']], 186); else text(c, 'PRESS ENTER', W / 2, 186, '#fff', 'center', 7); }
     }
   }
 }
