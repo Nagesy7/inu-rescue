@@ -165,8 +165,8 @@ export function drawGame(c, g, opts = {}) {
   if (g.mode === 'intro') { text(c, `STAGE ${g.loop * 4 + g.stage + 1}`, W / 2, 100, '#fff', 'center', 12); text(c, g.S.final ? 'OPEN ALL 3 KENNELS!' : 'FREE THE PUP, THEN REACH THE VAN!', W / 2, 116, '#f0c840', 'center', 7); }
   if (g.mode === 'clear') { text(c, 'STAGE CLEAR!', W / 2, 100, '#7ae07a', 'center', 14); text(c, `PUPS SAVED: ${g.saved || 1}`, W / 2, 118, '#ff8aa0', 'center', 8); }
   if (opts.paused) { const pm = opts.pad; R(c, 0, 0, W, H, '#0008'); R(c, 32, 80, W - 64, 64, '#000d');
-    text(c, opts.paused === 'pad' ? 'CONTROLLER OFF' : 'PAUSED', W / 2, 86, opts.paused === 'pad' ? '#f0c840' : '#fff', 'center', opts.paused === 'pad' ? 12 : 16);
-    if (opts.paused === 'pad') text(c, opts.touch ? 'RECONNECT, TAP OR PRESS ANY KEY' : 'RECONNECT, CLICK OR PRESS ANY KEY', W / 2, 110, '#ddd', 'center', 7);
+    text(c, opts.paused === 'pad' ? (pm ? 'CONTROLLER BACK' : 'CONTROLLER OFF') : 'PAUSED', W / 2, 86, opts.paused === 'pad' ? '#f0c840' : '#fff', 'center', opts.paused === 'pad' ? 12 : 16);
+    if (opts.paused === 'pad') text(c, pm ? 'PRESS ANY BUTTON TO RESUME' : opts.touch ? 'RECONNECT, TAP OR PRESS ANY KEY' : 'RECONNECT, CLICK OR PRESS ANY KEY', W / 2, 110, '#ddd', 'center', 7);
     else if (pm && opts.paused !== 'blur') { padMenu(c, pm.items, pm.i, 106); padHint(c, pm.brand, [['a', 'SELECT'], ['b', 'RESUME']], 130); }
     else text(c, opts.paused === 'blur' ? (opts.touch ? 'TAP OR PRESS ANY KEY TO RESUME' : 'CLICK OR PRESS ANY KEY TO RESUME') : (opts.touch ? 'TAP PAUSE TO RESUME' : 'P / ESC TO RESUME'), W / 2, 118, '#f0c840', 'center', 7); }
 }
