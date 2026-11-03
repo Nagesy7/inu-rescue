@@ -196,15 +196,6 @@ export function padMenu(c, items, sel, y) { // horizontal focus menu: focused it
   items.forEach((s, i) => { const f = i === sel; if (f) { R(c, x, y - 2, ws[i], 13, '#f0c840'); R(c, x + 1, y - 1, ws[i] - 2, 11, '#2a2410'); }
     text(c, (f ? '> ' : '') + s, x + ws[i] / 2, y, f ? '#f0c840' : '#aaa', 'center', 8); x += ws[i] + 8; });
 }
-export function drawPadToast(c, toast, now) {
-  if (!toast) return; const age = now - toast.t; if (age < 0 || age > 2.8) return;
-  const a = age < 0.2 ? age / 0.2 : age > 2.4 ? (2.8 - age) / 0.4 : 1, G = GLYPHS[toast.brand] || GLYPHS.generic, onl = toast.type === 'connected';
-  c.save(); c.globalAlpha = Math.max(0, Math.min(1, a)); R(c, 40, 24, W - 80, 30, '#000e'); R(c, 40, 24, W - 80, 1, onl ? '#7ae07a' : '#e05a6a');
-  text(c, `${G.name} ${onl ? 'CONNECTED' : 'DISCONNECTED'}`, W / 2, 28, onl ? '#7ae07a' : '#e05a6a', 'center', 7);
-  if (onl) padHint(c, toast.brand, [['a', 'JUMP'], ['b', 'BACK'], ['start', 'PAUSE']], 41);
-  else text(c, 'GAME PAUSED  -  RECONNECT TO KEEP PLAYING', W / 2, 41, '#ccc', 'center', 6);
-  c.restore();
-}
 // cosmetic overlays (collar / gear) on the rescuer: pure pixels, no gameplay effect. Shared Shiba is 18x22, hero art 12x16.
 export function drawGear(c, lk, x, y, face = 1, shiba = false, back = false) {
   const top = y - (shiba ? 20 : 16), neck = y - (shiba ? 11 : 10);

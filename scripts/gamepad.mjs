@@ -21,14 +21,22 @@ async function open(opts, tag) { const ctx = await b.newContext(opts), p = await
   await p.goto(URL); await p.waitForTimeout(2500); return { ctx, p }; }
 const tap = async (p, i, ms = 120) => { await p.evaluate(i => __pad.btn(0, i, true), i); await p.waitForTimeout(ms); await p.evaluate(i => __pad.btn(0, i, false), i); await p.waitForTimeout(ms); };
 const S = p => p.evaluate(() => ({ scene: __inu.scene, paused: __inu.paused, menu: __inu.padMenuI, mode: __inu.g?.mode, x: __inu.g?.player.x, y: __inu.g?.player.y, st: __inu.g?.player.state, jid: __inu.g?.player.jumpId, toast: __inu.padToast && { type: __inu.padToast.type, brand: __inu.padToast.brand }, set: !document.getElementById('settings').hidden, focus: document.querySelector('#settings .padfocus')?.textContent?.trim() || document.querySelector('#settings .padfocus input, #settings button.padfocus')?.id }));
+const toastClear = p => p.evaluate(() => { const t = document.getElementById('pad-toast'); if (!t || t.hidden) return 'hidden';
+  const r = t.getBoundingClientRect(), hit = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  const obs = [document.getElementById('screen'), ...document.querySelectorAll('#pad [data-k], #stick, #kbar')].filter(e => e.getBoundingClientRect().width && getComputedStyle(e).display !== 'none');
+  const bad = obs.filter(e => hit(r, e.getBoundingClientRect())).map(e => e.id || e.dataset.k);
+  t.style.pointerEvents = 'auto'; const pts = [[r.left + 12, r.top + 6], [r.right - 12, r.top + 6], [r.left + 12, r.bottom - 6], [r.right - 12, r.bottom - 6], [(r.left + r.right) / 2, (r.top + r.bottom) / 2]];
+  for (const [x, y] of pts) { const top = document.elementFromPoint(x, y); if (top !== t && !t.contains(top)) bad.push('covered-by ' + (top?.id || top?.tagName)); } t.style.pointerEvents = '';
+  return bad.length ? bad.join(',') : `clear ${r.left | 0},${r.top | 0} ${r.width | 0}x${r.height | 0}`; });
 for (const [tag, opts] of [['844x390', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 }], ['1280x800', { viewport: { width: 1280, height: 800 } }]]) {
   const { ctx, p } = await open(opts, tag);
   // PS connect toast + title menu with glyphs
   await p.evaluate(id => __pad.plug(0, id), PS); await p.waitForTimeout(500); let s = await S(p);
   ok(s.toast?.type === 'connected' && s.toast.brand === 'ps', `${tag}: PS toast (${JSON.stringify(s.toast)})`);
+  { const tc = await toastClear(p); ok(/^clear/.test(tc), `${tag}: PS toast pill clear of canvas/HUD/controls (${tc})`); }
   await p.screenshot({ path: `${OUT}/toast-ps-${tag}.png` });
   // title focus: D-pad right moves to SETTINGS, Cross opens the panel, D-pad walks it, Circle closes
-  await p.waitForTimeout(2600); await tap(p, 15); s = await S(p); ok(s.menu === 1, `${tag}: title focus -> SETTINGS`);
+  await p.waitForTimeout(2900); ok(await p.evaluate(() => document.getElementById('pad-toast').hidden), `${tag}: toast gone after ~2.8s`); await tap(p, 15); s = await S(p); ok(s.menu === 1, `${tag}: title focus -> SETTINGS`);
   await p.screenshot({ path: `${OUT}/menu-title-focus-${tag}.png` });
   await tap(p, 0); s = await S(p); ok(s.set, `${tag}: Cross on SETTINGS opens panel`);
   const muted0 = await p.evaluate(() => __inu.settings().muted);
@@ -60,10 +68,11 @@ for (const [tag, opts] of [['844x390', { viewport: { width: 844, height: 390 }, 
   // unplug mid-run -> auto-pause + disconnected toast; any button resumes after replug
   await p.evaluate(() => __pad.unplug(0)); await p.waitForTimeout(200); s = await S(p);
   ok(s.paused === 'pad' && s.toast?.type === 'disconnected', `${tag}: unplug auto-pauses (${s.paused}, ${JSON.stringify(s.toast)})`);
+  { const tc = await toastClear(p); ok(/^clear/.test(tc), `${tag}: disconnect pill clear (${tc})`); }
   await p.screenshot({ path: `${OUT}/disconnect-pause-${tag}.png` });
   // Xbox plugs in: toast with A/B, any button resumes
   await p.evaluate(id => __pad.plug(0, id), XB); await p.waitForTimeout(400); s = await S(p);
-  ok(s.toast?.brand === 'xbox' && s.toast.type === 'connected', `${tag}: Xbox toast`); await p.screenshot({ path: `${OUT}/toast-xbox-${tag}.png` });
+  ok(s.toast?.brand === 'xbox' && s.toast.type === 'connected', `${tag}: Xbox toast`); { const tc = await toastClear(p); ok(/^clear/.test(tc), `${tag}: Xbox toast pill clear (${tc})`); } await p.screenshot({ path: `${OUT}/toast-xbox-${tag}.png` });
   await tap(p, 1); s = await S(p); ok(s.paused === false, `${tag}: any button resumes after replug`);
   // hidden tab: polling stops (no input applied)
   await ctx.close();

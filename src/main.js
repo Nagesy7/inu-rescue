@@ -1,6 +1,6 @@
 import { createGame, step, progress, W, H } from './engine.js';
-import { drawGame, drawTitle, text, drawPadToast, padHint } from './render.js';
-import { createPads, applyPad, PAUSE_MENU } from './gamepad.js';
+import { drawGame, drawTitle, text, padHint } from './render.js';
+import { createPads, applyPad, PAUSE_MENU, GLYPHS } from './gamepad.js';
 import { initAudio, play, setMuted, isMuted, setVolume, setMusic, setAmbience, tickAmbience } from './audio.js';
 import { createAmbient, setScene, updateAmbient, counts } from './ambient.js';
 import { eventFor, sydneyDate, runConditions, awardBones, loadBones } from './daily.js';
@@ -128,7 +128,7 @@ function padFocus(i) { const els = focusables(); setBox.querySelectorAll('.padfo
   padI = i < 0 ? -1 : (i + els.length) % els.length; const el = els[padI]; if (!el) return;
   const box = el.closest('label') || el; box.classList.add('padfocus'); el.focus({ preventScroll: true }); box.scrollIntoView?.({ block: 'nearest' }); }
 const padAct = {
-  toast: ev => { app.padToast = { ...ev, t: app.t }; },
+  toast: ev => { app.padToast = { ...ev, t: app.t }; showPadToast(ev); },
   releaseAll: () => { for (const k in keys) keys[k] = false; padHeld = {}; },
   toggleMute: () => setSound({ muted: !isMuted() }),
   startGame: () => { initAudio(); newGame(); },
@@ -140,6 +140,34 @@ const padAct = {
   entryKey: code => entryKey(code),
   toTitle: () => { app.scene = 'title'; recalcFeed(); refreshFeed(true); },
 };
+// Connect / disconnect toast: a small DOM pill parked in free page space (side gutter / bottom-left), never over the canvas,
+// HUD, touch controls, wallet chrome or the profile badge. ~2.8s with a fade-out. Glyphs are plain characters / letters.
+const toastEl = document.createElement('div'); toastEl.id = 'pad-toast'; toastEl.setAttribute('role', 'status'); toastEl.hidden = true; document.body.appendChild(toastEl);
+const GCH = { cross: '✕', circle: '○', square: '□', triangle: '△' };
+const glyph = (brand, k) => { const v = (GLYPHS[brand] || GLYPHS.generic)[k]; return k === 'start' ? `<i class="gl st">${v}</i>` : `<i class="gl">${GCH[v] || v}</i>`; };
+function placeToast() {
+  const gap = 6, w = toastEl.offsetWidth, h = toastEl.offsetHeight, vw = innerWidth, vh = innerHeight;
+  const cr = cv.getBoundingClientRect(), bg = el => !el || el === toastEl || toastEl.contains(el) || el === document.body || el === root || el === pad || el.contains(cv);
+  const clearAt = (x, y) => document.elementsFromPoint(x, y).filter(el => el !== toastEl && !toastEl.contains(el)).slice(0, 1).every(bg); // shadow-DOM chrome (wallet, legal, badge) shows up as its host
+  const free = (x, y) => { if (x < 0 || y < 0 || x + w > vw || y + h > vh) return false;
+    if (x < cr.right + gap && x + w > cr.left - gap && y < cr.bottom + gap && y + h > cr.top - gap) return false;
+    for (let px = x - gap; px <= x + w + gap; px += Math.min(8, (w + 2 * gap) / 2)) for (let py = y - gap; py <= y + h + gap; py += Math.min(8, (h + 2 * gap) / 2)) if (!clearAt(Math.min(vw - 1, Math.max(0, px)), Math.min(vh - 1, Math.max(0, py)))) return false;
+    return true; };
+  const cands = [[8, vh - h - 28], [8, vh - h - 8]]; // bottom-left (desktop: above the legal footer)
+  for (let y = 8; y + h <= vh; y += 6) { cands.push([Math.max(8, (cr.left - w) / 2), y]); cands.push([Math.min(vw - w - 8, cr.right + (vw - cr.right - w) / 2), y]); } // side gutters, top to bottom
+  for (let y = cr.bottom + 4; y + h <= vh; y += 6) cands.push([(vw - w) / 2, y]); // portrait: below the canvas
+  const hit = cands.find(([x, y]) => free(x, y));
+  if (!hit) { toastEl.hidden = true; return false; } // no free space: skip the toast rather than cover the game
+  toastEl.style.left = Math.round(hit[0]) + 'px'; toastEl.style.top = Math.round(hit[1]) + 'px'; return true;
+}
+function showPadToast(ev) {
+  const G = GLYPHS[ev.brand] || GLYPHS.generic, onl = ev.type === 'connected';
+  toastEl.className = onl ? 'on' : 'off';
+  toastEl.innerHTML = `<b>${onl ? '🎮' : '⚠'} ${G.name} ${onl ? 'connected' : 'disconnected'}</b>` + (onl ? `<span>${glyph(ev.brand, 'a')} jump ${glyph(ev.brand, 'b')} back ${glyph(ev.brand, 'start')} pause</span>` : '<span>Game paused</span>');
+  toastEl.hidden = false; toastEl.style.left = '-999px'; toastEl.style.top = '0px'; toastEl.classList.remove('fade'); clearTimeout(showPadToast.t); clearTimeout(showPadToast.h);
+  if (!placeToast()) return;
+  showPadToast.t = setTimeout(() => toastEl.classList.add('fade'), 2300); showPadToast.h = setTimeout(() => { toastEl.hidden = true; }, 2800);
+}
 function padFrame(dt) {
   if (document.hidden) { padHeld = {}; return; }
   const r = pads.poll(dt); if (!r.count && !r.events.length) { padHeld = {}; return; }
@@ -247,7 +275,7 @@ function recalcFeed() { const today = sydneyDate(); app.event = app.scene === 'g
 setInterval(() => { if (app.scene === 'title' && !document.hidden) { recalcFeed(); refreshFeed(); } }, 5000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden && app.scene === 'title') refreshFeed(); });
 recalcFeed(); refreshFeed(true); app.counts = () => counts(app.amb);
-function render() { draw(); drawPadToast(c, app.padToast, app.t); }
+function render() { draw(); }
 function draw() {
   const hi = lb.reduce((m, e) => Math.max(m, e.score), 0);
   if (app.scene === 'title') return drawTitle(c, app.t, lb, describe, formatTime, lookNow, !root.classList.contains('notouch') && (root.classList.contains('joy') ? 'joy' : true), { amb: app.amb, event: app.event, feed: app.feed, feedPage: app.feedPage, bones: app.bones, pad: pads.count ? { i: app.padMenuI || 0, brand: pads.brand } : null });

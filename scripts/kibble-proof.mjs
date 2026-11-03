@@ -39,7 +39,7 @@ for (const [tag, opts] of [['desktop', { viewport: { width: 1280, height: 800 } 
   await p.goto(URL + '?wallet=BzLYTFAfUsjzQ5x8bx5BbPK4DFtaHrLCuferkvkxTNGJ');
   await p.waitForFunction(() => window.__inu.look?.shiba, null, { timeout: 20000 }).catch(() => {});
   ok(await p.evaluate(() => window.__inu.look?.shiba?.profile?.name) === 'Mochi', `${tag}: rescuer = shared Shiba from /api/profile (wallet passed by Verse door)`);
-  ok(await p.evaluate(() => document.documentElement.dataset.kibble) === 'live' && /Sign in/.test(await p.textContent('#k-wallet').catch(() => '')) && !/Bz/.test(await p.textContent('#inu-wallet').catch(() => '')), `${tag}: door wallet is not a session: still live/sign-in`);
+  ok(await p.evaluate(() => document.documentElement.dataset.kibble) === 'live' && /Connect Wallet/.test(await p.textContent('#inu-wallet', { timeout: 10000 }).catch(() => '')) && !/Bz/.test(await p.textContent('#inu-wallet', { timeout: 10000 }).catch(() => '')), `${tag}: door wallet is not a session: still live/Connect Wallet`);
   await p.waitForTimeout(400); await p.screenshot({ path: `proof/kibble-${tag}-shiba-title.png` });
   await p.keyboard.press('Enter'); await p.waitForTimeout(2600); await p.screenshot({ path: `proof/kibble-${tag}-shiba-ingame.png` });
   await ctx.close();
