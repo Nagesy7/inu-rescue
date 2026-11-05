@@ -3,6 +3,14 @@ export const W = 256, H = 240, DT = 1 / 60;
 export const PHYS = { walk: 54, climb: 38, jumpVy: -132, grav: 430, jumpVx: 54, maxDrop: 40, coyote: 0.1, roll: 62, flea: 26 };
 
 // Roller speed: slower than walking (54px/s) on stage 1, ramping per stage and loop.
+// Stage-1 warm-up (first loop only): the gap between throws starts EASE_EXTRA s longer and eases linearly to the stage's
+// normal value over EASE_SECS of play; g.t restarts on every (re)spawn, so it also gives a gentler restart after a death.
+export const EASE = { secs: 25, extra: 1.6, firstThrow: 2.4 };
+export function easeOn(g) { return g.stage === 0 && g.loop === 0; }
+export function spawnInterval(g) {
+  const base = Math.max(1.0, g.S.spawn - 0.3 * g.loop);
+  return easeOn(g) ? base + EASE.extra * Math.max(0, 1 - g.t / EASE.secs) : base;
+}
 export function rollSpeed(g) { return Math.min(PHYS.roll + 8 * g.loop, 40 + 7 * g.stage + 8 * g.loop); }
 export function mulberry32(a) {
   return function () { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a);
@@ -98,7 +106,7 @@ export function loadStage(g, respawn = false) {
   g.bonus = 5000 + 1000 * Math.min(g.loop, 3); g.bonusClock = 0;
   const st = g.cp && S.checkpoint ? S.checkpoint : S.start, pl = g.plats[st.p];
   g.player = { x: st.x, y: surfaceY(pl, st.x), vx: 0, vy: 0, state: 'walk', face: 1, anim: 0, jumpId: 0, takeoffY: 0, lad: null, hammer: 0, ride: null };
-  g.hazards = []; g.fleas = []; g.spawnT = 1.4; g.fleaT = 4; g.convT = 0;
+  g.hazards = []; g.fleas = []; g.spawnT = easeOn(g) ? EASE.firstThrow : 1.4; g.fleaT = 4; g.convT = 0;
   g.hammers = S.hammers.map(h => ({ x: h.x, y: surfaceY(g.plats[h.p], h.x) - 14, taken: false }));
   g.toys = S.toys.map(t => ({ x: t.x, y: surfaceY(g.plats[t.p], t.x), k: t.k, taken: false }));
   g.pups = S.pups.map((q, i) => ({ ...at(g, q), freed: g.freed[i] }));
@@ -195,7 +203,7 @@ function spawnHazard(g) {
   if (kind === 'yarn') {
     if (c.hop) return;
     const d = Math.sign(p.x - c.x) || 1;
-    g.hazards.push({ kind: 'yarn', big: true, x: c.x + d * 10, y: c.y - 14, vx: d * (rollSpeed(g) * 0.8), vy: -60, state: 'fall', r: 5, rot: 0, jumpId: -1, tried: new Set(), fromPl: null });
+    g.hazards.push({ kind: 'yarn', big: true, x: c.x + d * 10, y: c.y - 14, vx: d * (rollSpeed(g) * 0.8), vy: -60, state: 'fall', r: 5, rot: 0, jumpId: -1, tried: new Set(), fromPl: null, noSplit: easeOn(g) && g.t < EASE.secs });
     c.throwT = 0.5; g.events.push('throw');
   } else if (kind === 'tin') {
     // a tin of dog food tipped off the roof edge above: shadow warning first, then it drops straight down
@@ -235,6 +243,7 @@ export function stepHazard(g, b) {
         b.y = l.sy; b.fromPl = null; b.tried.clear();
         // big yarn balls bounce once and split into two small balls rolling apart
         if (b.big && b.vy > 90) { b.big = false; b.split = true; b.vy = -70; g.events.push('bounce'); return; }
+        if (b.split && b.noSplit) { b.split = false; b.state = 'roll'; b.r = 4; b.vy = 0; b.vx = Math.sign(b.vx || 1) * rollSpeed(g); return; }
         if (b.split) { b.split = false; b.state = 'roll'; b.r = 4; b.vy = 0; const sp = rollSpeed(g);
           b.vx = sp; g.hazards.push({ ...b, tried: new Set(), vx: -sp, jumpId: -1 }); g.events.push('split'); return; }
         b.state = 'roll'; b.vy = 0; if (!b.vx) b.vx = rollSpeed(g);
@@ -353,7 +362,7 @@ export function step(g, inp = {}) {
   g.bonusClock += DT; if (g.bonusClock >= 2) { g.bonusClock -= 2; g.bonus = Math.max(0, g.bonus - 100); if (g.bonus === 0) { killPlayer(g, 'time'); return; } }
   stepCat(g);
   g.spawnT -= DT;
-  if (g.spawnT <= 0) { spawnHazard(g); g.spawnT = Math.max(1.0, g.S.spawn - 0.3 * g.loop) + g.rng() * 1.0; }
+  if (g.spawnT <= 0) { spawnHazard(g); g.spawnT = spawnInterval(g) + g.rng() * 1.0; }
   if (g.S.fleaSpots.length) { g.fleaT -= DT; if (g.fleaT <= 0) { g.fleaT = 6 - Math.min(2, g.loop); const s = g.S.fleaSpots[Math.floor(g.rng() * g.S.fleaSpots.length)]; const q = at(g, s); spawnFlea(g, q.x, q.y); } }
   stepPlayer(g, inp); trackHeight(g);
   if (g.mode !== 'play') return;

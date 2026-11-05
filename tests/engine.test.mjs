@@ -51,7 +51,7 @@ test('no ladder means up does nothing; hammer blocks climbing', () => {
   g.player.x = 110; g.player.hammer = 5; E.step(g, { up: true }); assert.equal(g.player.state, 'walk');
 });
 test('yarn is lobbed by the cat, bounces once and splits into two small rollers', () => {
-  const g = play(); g.player.x = 240; g.player.y = E.surfaceY(g.plats[0], 240); g.spawnT = 0; E.step(g, {}); g.spawnT = 999;
+  const g = play(); g.player.x = 240; g.player.y = E.surfaceY(g.plats[0], 240); g.t = E.EASE.secs; g.spawnT = 0; E.step(g, {}); g.spawnT = 999;
   const y = g.hazards.find(h => h.kind === 'yarn'); assert.ok(y && y.big && y.state === 'fall');
   let split = false; for (let i = 0; i < 300 && !split; i++) { E.step(g, {}); split = g.events.includes('split'); }
   assert.ok(split, 'split'); const small = g.hazards.filter(h => h.r === 4); assert.equal(small.length, 2); assert.ok(small[0].vx * small[1].vx < 0);
