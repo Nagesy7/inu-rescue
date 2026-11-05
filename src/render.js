@@ -236,7 +236,7 @@ export function drawTitle(c, t, lb, describeFn, fmt, lk = {}, touch = false, x =
   if (lb.length) panels.push({ id: 'local', title: 'TOP RESCUERS', rows: lb.slice(0, 5).map((e, i) => `${i + 1}. ${e.name} S${e.stage} H${String(e.height).padStart(3)} ${fmt(e.timeMs)}`) });
   for (const p of x.feed || []) panels.push(p);
   if (!panels.length) panels.push({ id: 'none', title: 'TOP RESCUERS', rows: [], empty: 'no runs yet' });
-  const pi = x.feedPage != null && panels.findIndex(p => p.id === x.feedPage) >= 0 ? panels.findIndex(p => p.id === x.feedPage) : Math.floor(t / 6) % panels.length, P = panels[pi];
+  const pi = x.feedPage != null && panels.findIndex(p => p.id === x.feedPage) >= 0 ? panels.findIndex(p => p.id === x.feedPage) : ((Math.floor(t / 6) % panels.length) + panels.length) % panels.length || 0, P = panels[pi] || panels[0];
   text(c, P.title, W / 2, 134, '#5ad0d8', 'center', 7);
   if (panels.length > 1) for (let i = 0; i < panels.length; i++) R(c, W / 2 - panels.length * 3 + i * 6, 142, 3, 1, i === pi ? '#5ad0d8' : '#444');
   if (!P.rows.length) text(c, P.empty || '', W / 2, 152, P.id === 'empty' ? '#7ae07a' : '#777', 'center', 7);
