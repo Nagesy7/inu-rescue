@@ -29,17 +29,20 @@ addEventListener('touchstart', () => root.classList.remove('notouch'), { once: t
 const keys = {}; let jumpEdge = false, startEdge = false;
 const softPaused = () => app.paused === 'blur' || app.paused === 'pad'; // auto-pauses: any key / tap / button resumes
 const KEYMAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down' };
+const downCodes = new Set(); // codes physically held right now (keys held from gameplay are ignored by the initials prompt)
+let staleCodes = new Set();
 addEventListener('keydown', e => {
-  initAudio();
+  initAudio(); downCodes.add(e.code);
   if (softPaused() && app.scene === 'game') { app.paused = false; e.preventDefault(); return; } // any key resumes after focus loss / pad unplugged
   if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = true; e.preventDefault(); }
   if (e.code === 'Space' || e.code === 'KeyZ' || e.code === 'KeyX') { if (!e.repeat) jumpEdge = true; e.preventDefault(); }
   if (e.code === 'Enter') startEdge = true;
   if ((e.code === 'KeyP' || e.code === 'Escape') && app.scene === 'game') app.paused = !app.paused;
   if (e.code === 'KeyM') setSound({ muted: !isMuted() });
-  if (app.scene === 'entry') entryKey(e.code);
+  if (app.scene === 'entry' && !staleCodes.has(e.code)) entryKey(e.code);
 });
-addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = false; });
+addEventListener('keyup', e => { downCodes.delete(e.code); staleCodes.delete(e.code); if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = false; });
+addEventListener('blur', () => { downCodes.clear(); for (const k in keys) keys[k] = false; });
 const autoPause = () => { if (app.scene === 'game' && !app.paused && app.g?.mode !== 'over') { app.paused = 'blur'; for (const k in keys) keys[k] = false; } };
 addEventListener('blur', autoPause);
 document.addEventListener('visibilitychange', () => { if (document.hidden) autoPause(); });
@@ -80,6 +83,13 @@ pad.addEventListener('pointermove', e => {
 const up = e => { if (ptrs.has(e.pointerId)) { e.preventDefault(); setPtr(e.pointerId, undefined); } };
 for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(t, up);
 pad.addEventListener('pointerleave', e => { if (!pad.hasPointerCapture?.(e.pointerId)) up(e); });
+// belt and braces: a pointerup/cancel that lands outside the pad (capture failed or was lost), or a touchend/touchcancel with no
+// fingers left on the screen, always clears every held pad key, so a direction can never stay highlighted / keep walking.
+function releasePad() { for (const id of [...ptrs.keys()]) setPtr(id, undefined); for (const el of pad.querySelectorAll('.btn.on')) el.classList.remove('on');
+  for (const k of ['left', 'right', 'up', 'down']) if (!stickKeys[k]) keys[k] = false; }
+for (const t of ['pointerup', 'pointercancel']) addEventListener(t, e => { if (ptrs.has(e.pointerId)) setPtr(e.pointerId, undefined); }, true);
+for (const t of ['touchend', 'touchcancel']) addEventListener(t, e => { if (!e.touches || e.touches.length === 0) releasePad(); }, true);
+app.releasePad = () => releasePad();
 // ---- optional virtual joystick (Settings > Joystick controls, OFF by default). Own pointer tracking, so the stick and the
 // JUMP/START/PAUSE buttons work at the same time (multi-touch). The D-pad path above is untouched when it's off.
 const stick = document.getElementById('stick'), knob = stick.querySelector('.knob');
@@ -107,7 +117,8 @@ stick.addEventListener('pointerdown', e => {
 });
 stick.addEventListener('pointermove', e => { if (e.pointerId !== stickId) return; e.preventDefault(); e.stopPropagation(); stickMove(e); });
 for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) stick.addEventListener(t, e => { if (e.pointerId === stickId) stickEnd(); });
-addEventListener('blur', stickEnd); document.addEventListener('visibilitychange', () => { if (document.hidden) stickEnd(); });
+addEventListener('blur', stickEnd);
+for (const t of ['touchend', 'touchcancel']) addEventListener(t, e => { if (stickId !== null && (!e.touches || e.touches.length === 0)) stickEnd(); }, true); document.addEventListener('visibilitychange', () => { if (document.hidden) stickEnd(); });
 // settings panel (gear button in the top-left bar)
 const setBox = document.getElementById('settings'); let pausedBySettings = false;
 document.getElementById('k-set').onclick = () => { if (app.scene === 'game' && !app.paused) { app.paused = true; pausedBySettings = true; } applySettings(); setBox.hidden = false; app.settingsOpen = true; };
@@ -182,8 +193,9 @@ addEventListener('blur', () => { for (const id of [...ptrs.keys()]) setPtr(id, u
 document.addEventListener('visibilitychange', () => { if (document.hidden) for (const id of [...ptrs.keys()]) setPtr(id, undefined); });
 
 const LET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ', NAME_MAX = 8, BLANK = LET.length - 1;
+const ENTRY_GUARD_MS = 400; // gameplay input still in flight when Game Over appears must not type initials
 function entryKey(code) {
-  const en = app.entry; if (!en) return;
+  const en = app.entry; if (!en || performance.now() - en.at < ENTRY_GUARD_MS) return;
   const typed = /^Key([A-Z])$|^Digit([0-9])$/.exec(code);
   if (typed) { en.ch[en.i] = LET.indexOf(typed[1] || typed[2]); en.i = Math.min(NAME_MAX - 1, en.i + 1); return; }
   if (code === 'Backspace') { en.ch[en.i] = BLANK; en.i = Math.max(0, en.i - 1); return; }
@@ -225,9 +237,12 @@ function newGame() { const seed = (Date.now() & 0xffff) || 7; app.g = createGame
   app.event = eventFor(Date.now()); app.runEvent = app.event; app.cond = runConditions(seed, app.runEvent, OVER); app.runPups = [0, 0, 0, 0]; app.lastSaved = 0; app.bonesGained = 0; }
 // Bones for the run: pups saved per stage x today's event bonus. Separate from the prize score (runScore) and the engine score.
 function grantBones() { const r = awardBones(localStorage, app.runPups || [0, 0, 0, 0], app.runEvent || app.event, sydneyDate()); app.bonesGained = r.gained; app.bones = r.state.bones; if (r.gained) KB.K.walletUi?.save?.(); }
+// clear all held gameplay input (keyboard, touch pad, stick, controller) so nothing carries into the initials prompt
+function clearInput() { for (const k in keys) keys[k] = false; jumpEdge = false; startEdge = false; padHeld = {}; staleCodes = new Set(downCodes);
+  releasePad(); stickEnd(); }
 function endGame() {
   const prog = progress(app.g); app.lastProg = prog; app.posted = null; postRun(prog); grantBones();
-  if (qualifiesLB(lb, prog)) { app.scene = 'entry'; app.entry = { ch: [8, 13, 20].concat(Array(NAME_MAX - 3).fill(BLANK)), i: 0, prog }; }
+  if (qualifiesLB(lb, prog)) { app.scene = 'entry'; app.entry = { ch: [8, 13, 20].concat(Array(NAME_MAX - 3).fill(BLANK)), i: 0, prog, at: performance.now() }; clearInput(); }
   else { app.scene = 'over'; app.overT = 0; app.lastEntry = null; }
 }
 

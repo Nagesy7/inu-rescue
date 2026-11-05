@@ -156,3 +156,10 @@ test('IP: original stage names and structure (no classic arcade stages/rivets/gi
   for (const S of E.STAGES) { assert.ok(!('rivets' in S) && !('bowl' in S)); assert.ok(S.perches.length >= 3, 'roaming villain'); }
   assert.equal(LB.LB_KEY, 'inu-rescue.leaderboard.v2');
 });
+test('ladder grab window: Up within 7px of a ladder climbs and snaps x onto it; 8px away does not', () => {
+  for (const off of [-7, -4, 0, 3, 7]) { const g = E.createGame({ seed: 1, stage: 0 }); g.mode = 'play'; g.spawnT = 99; const L = g.S.ladders[0];
+    g.player.x = L.x + off; g.player.y = E.ladderEnds(g, L).bot; g.player.state = 'walk';
+    E.step(g, { up: true }); assert.equal(g.player.state, 'climb', 'offset ' + off); assert.equal(g.player.x, L.x); }
+  const g = E.createGame({ seed: 1, stage: 0 }); g.mode = 'play'; g.spawnT = 99; const L = g.S.ladders[0];
+  g.player.x = L.x + 8.5; g.player.y = E.ladderEnds(g, L).bot; E.step(g, { up: true }); assert.equal(g.player.state, 'walk');
+});

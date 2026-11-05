@@ -128,14 +128,14 @@ function updateLifts(g) {
     return { x1: a.x1, x2: a.x2, y1: a.y, y2: a.y, mover: m.kind, m, dx: a.x1 - b.x1, dy: a.y - b.y }; });
 }
 
-export function ladderUp(g, x, y) {
-  for (const L of g.S.ladders) { const e = ladderEnds(g, L); if (Math.abs(L.x - x) < 5 && y >= e.top + 1 && y <= e.bot + 3) return L; }
-  return null;
-}
-export function ladderDown(g, x, y) {
-  for (const L of g.S.ladders) { const e = ladderEnds(g, L); if (Math.abs(L.x - x) < 5 && Math.abs(e.top - y) <= 3) return L; }
-  return null;
-}
+// Ladder grab window: within LADDER_GRAB px either side of the rope (was <5, near pixel-perfect). The nearest ladder wins and
+// stepPlayer snaps x onto it, so pressing Up/Down slightly past a ladder still climbs instead of overshooting.
+export const LADDER_GRAB = 7;
+function nearestLadder(g, x, ok) { let best = null, bd = 1e9;
+  for (const L of g.S.ladders) { const d = Math.abs(L.x - x); if (d <= LADDER_GRAB && d < bd && ok(L, ladderEnds(g, L))) { best = L; bd = d; } }
+  return best; }
+export function ladderUp(g, x, y) { return nearestLadder(g, x, (L, e) => y >= e.top + 1 && y <= e.bot + 3); }
+export function ladderDown(g, x, y) { return nearestLadder(g, x, (L, e) => Math.abs(e.top - y) <= 3); }
 
 export function killPlayer(g, why) {
   if (g.mode !== 'play') return;

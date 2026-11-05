@@ -19,8 +19,14 @@ test('early stage-1 yarn rolls on without splitting; after warm-up it splits as 
     while (n++ < 60 * 6 && g.mode === 'play') { g.player.x = 4; E.step(g, {}); split += g.events.filter(e => e === 'split').length; g.events = []; } return split; };
   assert.equal(run(0), 0); assert.ok(run(30) > 0);
 });
-test('novice sim: warm-up keeps a slow-reaction player alive longer on stage 1', () => {
-  const r = []; for (let s = 1; s <= 60; s++) r.push(runNovice(s, { delay: 8, miss: 0.25 }));
-  const mean = r.reduce((a, x) => a + x.firstDeath, 0) / r.length; console.log('novice mean first death', mean.toFixed(1));
-  assert.ok(mean > 30, String(mean));
+test('novice sim: warm-up keeps a slow-reaction player alive longer on stage 1 (vs. no warm-up), and novices can clear it', () => {
+  // Before the ladder grab window was widened (<5px -> 7px) the delayed novice kept overshooting ladders, so it lingered on the
+  // bottom floors (mean first death >30s, but only ~5% cleared stage 1). Now it climbs and actually progresses into the busier
+  // upper floors, so absolute survival time is no longer a fair warm-up signal: compare against the same sim with warm-up off.
+  const sim = () => { const r = []; for (let s = 1; s <= 60; s++) r.push(runNovice(s, { delay: 8, miss: 0.25 }));
+    return { mean: r.reduce((a, x) => a + x.firstDeath, 0) / r.length, clear: r.filter(x => x.cleared).length / r.length }; };
+  const on = sim(), saved = { ...E.EASE }; E.EASE.extra = 0; E.EASE.firstThrow = 1.4;
+  let off; try { off = sim(); } finally { Object.assign(E.EASE, saved); }
+  console.log('novice mean first death', on.mean.toFixed(1), 'vs no warm-up', off.mean.toFixed(1), 'clear rate', on.clear.toFixed(2));
+  assert.ok(on.mean > off.mean, `${on.mean} > ${off.mean}`); assert.ok(on.clear >= 0.9, String(on.clear));
 });
