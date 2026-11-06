@@ -1,15 +1,15 @@
-// Optional cosmetics links (Kibble Pay shop) + the once-per-session results nudge. Pure helpers (no DOM at import time), so the
+// Optional merch links (kibbleinu.com) + the once-per-session results nudge. Distinct from the in-game Cosmetics ($KIBBLE) button. Pure helpers (no DOM at import time), so the
 // copy, links and analytics props are checked in Node tests. Nothing here touches the engine, scoring, Bones, prize or wallet code.
 // $KIBBLE is never needed to play: these are plain outbound links (new tab) and the nudge only appears after a run has ended.
 export const SITE = 'inu-rescue';
-export const SHOP_TEXT = '🛍️ Shop';
-export const SHOP_TITLE = 'Optional cosmetics. $KIBBLE is never needed to play.';
+export const SHOP_TEXT = '🛍️ Merch ↗';
+export const SHOP_TITLE = 'Optional merch at kibbleinu.com. $KIBBLE is never needed to play.';
 export const SHOP_URL = 'https://kibbleinu.com/pay?utm_source=inu-rescue&utm_medium=menu#shop-h';
 export const SHOP_RESULTS_URL = 'https://kibbleinu.com/pay?utm_source=inu-rescue&utm_medium=results#shop-h';
 export const DEVS_TEXT = '🛠️ For devs'; // not placed: Inu Rescue has no about / more / footer / credits row of its own
 export const DEVS_URL = 'https://kibbleinu.com/for-devs.html?utm_source=inu-rescue&utm_medium=menu';
-export const NUDGE_TEXT = 'Like your look? Outfits, pets and cars for every Inu game are in the Kibble Pay shop. Optional, and never needed to play.';
-export const NUDGE_VISIT = 'Visit the shop →';
+export const NUDGE_TEXT = 'Like your look? Outfits, pets and cars for every Inu game are at kibbleinu.com. Optional, and never needed to play.';
+export const NUDGE_VISIT = 'Merch ↗';
 export const NUDGE_DISMISS = 'Not now';
 export const NUDGE_KEY = 'inu.shopNudge';
 export const FROM = Object.freeze({ menu: 'inu-rescue-menu', results: 'inu-rescue-results' });

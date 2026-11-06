@@ -16,12 +16,16 @@ for (const [tag, opt] of [['phone-844x390', { viewport: { width: 844, height: 39
   p.on('pageerror', e => errs.push(String(e))); p.on('popup', pp => pp.close().catch(() => {}));
   await p.addInitScript(() => { window.__va = []; window.va = (...a) => window.__va.push(a); });
   await p.goto(URL + '?stage=1'); await p.waitForTimeout(3500);
-  // 1) settings panel: Shop link as the last row
+  // 0) wallet Cosmetics button vs Merch link are distinct labels
+  const W = p.locator('#k-shop'); ok(await W.isVisible(), `${tag}: Cosmetics button visible`);
+  ok((await W.textContent()) === 'Cosmetics', `${tag}: wallet button labeled Cosmetics`);
+  ok((await W.getAttribute('title')) === 'In-game $KIBBLE cosmetics', `${tag}: Cosmetics tooltip`);
+  // 1) settings panel: Merch link as the last row
   await p.click('#k-set'); await p.waitForTimeout(200);
-  const L = p.locator('#set-shop'); ok(await L.isVisible(), `${tag}: Shop link visible in settings`);
-  ok((await L.textContent()) === '🛍️ Shop' && (await L.getAttribute('title')) === 'Optional cosmetics. $KIBBLE is never needed to play.', `${tag}: exact copy + tooltip`);
+  const L = p.locator('#set-shop'); ok(await L.isVisible(), `${tag}: Merch link visible in settings`);
+  ok((await L.textContent()) === '🛍️ Merch ↗' && (await L.getAttribute('title')) === 'Optional merch at kibbleinu.com. $KIBBLE is never needed to play.', `${tag}: exact copy + tooltip`);
   ok((await L.getAttribute('href')) === 'https://kibbleinu.com/pay?utm_source=inu-rescue&utm_medium=menu#shop-h' && (await L.getAttribute('target')) === '_blank' && /noopener/.test(await L.getAttribute('rel')), `${tag}: href, new tab, noopener`);
-  const lb = await L.boundingBox(), vp = p.viewportSize(); ok(lb.y + lb.height <= vp.height && lb.x >= 0 && lb.x + lb.width <= vp.width, `${tag}: Shop link on screen ${Math.round(lb.x)},${Math.round(lb.y)}`);
+  const lb = await L.boundingBox(), vp = p.viewportSize(); ok(lb.y + lb.height <= vp.height && lb.x >= 0 && lb.x + lb.width <= vp.width, `${tag}: Merch link on screen ${Math.round(lb.x)},${Math.round(lb.y)}`);
   await p.screenshot({ path: `${OUT}/${tag}-1-settings-shop-link.png` });
   await L.click(); await p.waitForTimeout(300);
   ok(JSON.stringify(await p.evaluate(() => window.__va.filter(a => a[0] === 'event'))) === JSON.stringify([['event', { name: 'paid_link_click', data: { product: 'shop', from: 'inu-rescue-menu', site: 'inu-rescue' } }]]), `${tag}: menu click event props product/from/site only`);
@@ -29,8 +33,8 @@ for (const [tag, opt] of [['phone-844x390', { viewport: { width: 844, height: 39
   // 2) results nudge on the run-end screen
   await gameOver(p);
   const N = p.locator('#shop-nudge'); ok(await N.isVisible(), `${tag}: nudge shown on GAME OVER`);
-  ok((await p.locator('#shop-nudge p').textContent()) === 'Like your look? Outfits, pets and cars for every Inu game are in the Kibble Pay shop. Optional, and never needed to play.', `${tag}: nudge copy exact`);
-  ok((await p.locator('#nudge-visit').textContent()) === 'Visit the shop →' && (await p.locator('#nudge-close').textContent()) === 'Not now', `${tag}: button copy exact`);
+  ok((await p.locator('#shop-nudge p').textContent()) === 'Like your look? Outfits, pets and cars for every Inu game are at kibbleinu.com. Optional, and never needed to play.', `${tag}: nudge copy exact`);
+  ok((await p.locator('#nudge-visit').textContent()) === 'Merch ↗' && (await p.locator('#nudge-close').textContent()) === 'Not now', `${tag}: button copy exact`);
   ok((await p.locator('#nudge-visit').getAttribute('href')) === 'https://kibbleinu.com/pay?utm_source=inu-rescue&utm_medium=results#shop-h', `${tag}: results utm`);
   ok(await p.evaluate(() => sessionStorage.getItem('inu.shopNudge')) === '1', `${tag}: sessionStorage inu.shopNudge set`);
   const nb = await N.boundingBox(), cb = await p.locator('canvas').boundingBox();
@@ -61,7 +65,7 @@ for (const [tag, opt] of [['phone-844x390', { viewport: { width: 844, height: 39
   const c2 = await b.newContext({ viewport: { width: 1280, height: 800 } }), q = await c2.newPage(); q.on('popup', pp => pp.close().catch(() => {}));
   await q.addInitScript(() => { window.__va = []; window.va = (...a) => window.__va.push(a); });
   await q.goto(URL + '?stage=1'); await q.waitForTimeout(1500); await gameOver(q); await q.click('#nudge-visit'); await q.waitForTimeout(300);
-  ok(JSON.stringify(await q.evaluate(() => window.__va.filter(a => a[0] === 'event'))) === JSON.stringify([['event', { name: 'paid_link_click', data: { product: 'shop', from: 'inu-rescue-results', site: 'inu-rescue' } }]]), 'Visit the shop: results event, product/from/site only');
+  ok(JSON.stringify(await q.evaluate(() => window.__va.filter(a => a[0] === 'event'))) === JSON.stringify([['event', { name: 'paid_link_click', data: { product: 'shop', from: 'inu-rescue-results', site: 'inu-rescue' } }]]), 'Merch ↗: results event, product/from/site only');
   ok(!(await q.locator('#shop-nudge').isVisible()), 'Visit hides the nudge'); await c2.close();
   // no va at all: clicks still work, no errors
   const c3 = await b.newContext({ viewport: { width: 1280, height: 800 } }), r = await c3.newPage(), e3 = []; r.on('pageerror', e => e3.push(String(e))); r.on('popup', pp => pp.close().catch(() => {}));

@@ -5,8 +5,8 @@ const html = read('index.html'), main = read('src/main.js');
 const BANNED = /hurry|limited|last chance|don't miss|guarantee|moon|profit|prize/i;
 const mem = (init = {}) => ({ s: { ...init }, getItem(k) { return this.s[k] ?? null; }, setItem(k, v) { this.s[k] = String(v); } });
 
-test('Shop link: exact copy, tooltip and href, new tab with rel=noopener, last row of the settings panel', () => {
-  assert.equal(S.SHOP_TEXT, '🛍️ Shop'); assert.equal(S.SHOP_TITLE, 'Optional cosmetics. $KIBBLE is never needed to play.');
+test('Merch link: exact copy, tooltip and href, new tab with rel=noopener, last row of the settings panel', () => {
+  assert.equal(S.SHOP_TEXT, '🛍️ Merch ↗'); assert.equal(S.SHOP_TITLE, 'Optional merch at kibbleinu.com. $KIBBLE is never needed to play.');
   assert.equal(S.SHOP_URL, 'https://kibbleinu.com/pay?utm_source=inu-rescue&utm_medium=menu#shop-h');
   const a = /<a id="set-shop"([^>]*)>([^<]*)<\/a>/.exec(html); assert.ok(a, 'link in index.html');
   const attr = n => (new RegExp(`${n}="([^"]*)"`).exec(a[1]) || [])[1];
@@ -17,8 +17,8 @@ test('Shop link: exact copy, tooltip and href, new tab with rel=noopener, last r
   assert.match(main, /getElementById\('set-shop'\)\.addEventListener\('click', \(\) => trackPaidLink\(window, 'shop', FROM\.menu\)\)/);
 });
 test('results nudge: exact copy, buttons, results utm, once per session, run-end only (not daily)', () => {
-  assert.equal(S.NUDGE_TEXT, 'Like your look? Outfits, pets and cars for every Inu game are in the Kibble Pay shop. Optional, and never needed to play.');
-  assert.equal(S.NUDGE_VISIT, 'Visit the shop →'); assert.equal(S.NUDGE_DISMISS, 'Not now');
+  assert.equal(S.NUDGE_TEXT, 'Like your look? Outfits, pets and cars for every Inu game are at kibbleinu.com. Optional, and never needed to play.');
+  assert.equal(S.NUDGE_VISIT, 'Merch ↗'); assert.equal(S.NUDGE_DISMISS, 'Not now');
   assert.equal(S.SHOP_RESULTS_URL, 'https://kibbleinu.com/pay?utm_source=inu-rescue&utm_medium=results#shop-h');
   assert.equal(S.NUDGE_KEY, 'inu.shopNudge');
   const ss = mem(); assert.equal(S.shouldNudge(ss, 'over'), true);
@@ -27,6 +27,13 @@ test('results nudge: exact copy, buttons, results utm, once per session, run-end
   S.markNudged(ss); assert.equal(ss.s['inu.shopNudge'], '1'); assert.equal(S.shouldNudge(ss, 'over'), false, 'once per session');
   assert.equal(S.shouldNudge(null, 'over'), true); assert.equal(S.shouldNudge({ getItem() { throw new Error('blocked'); } }, 'over'), false, 'storage blocked: stay quiet');
   assert.match(main, /trackPaidLink\(window, 'shop', FROM\.results\)/); assert.match(main, /shouldNudge\(sessionStorage, app\.scene\)/);
+});
+
+test('wallet Cosmetics button is labeled Cosmetics (distinct from Merch ↗ external link)', () => {
+  assert.match(html, /<button id="k-shop"[^>]*>Cosmetics<\/button>/);
+  assert.match(html, /title="In-game \$KIBBLE cosmetics"/);
+  assert.ok(!html.includes('>Shop</button>'), 'old Shop label removed from wallet button');
+  assert.equal(S.SHOP_TEXT, '🛍️ Merch ↗');
 });
 test('For devs: not placed (no about/more/footer/credits row in Inu Rescue); constants match the spec if added later', () => {
   assert.equal(S.DEVS_TEXT, '🛠️ For devs'); assert.equal(S.DEVS_URL, 'https://kibbleinu.com/for-devs.html?utm_source=inu-rescue&utm_medium=menu');
