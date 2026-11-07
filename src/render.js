@@ -11,12 +11,33 @@ export function text(c, s, x, y, col = '#fff', align = 'left', size = 8) {
 const THEMES = [ { beam:'#e05a6a', dark:'#8a2838', lad:'#5ad0d8' }, { beam:'#e09a3a', dark:'#7a4a18', lad:'#7ae07a' },
   { beam:'#9a6ae0', dark:'#4a2a80', lad:'#f0c840' }, { beam:'#4aa0e8', dark:'#1a4a80', lad:'#f08ab0' } ];
 
+// Treehouse material only. Fixed circles and the inset leaf recipe; built once, drawn as 1px fills.
+const TREE_CANOPIES = [[128, 30, 46], [60, 40, 26], [200, 44, 28]];
+const TREE_LEAF_LIGHT = [[0, 1], [1, 0], [1, 1], [2, 1]], TREE_LEAF_SHADE = [[0, 0], [1, 0], [2, 0], [1, 1]];
+function treeLeafInside(px, py) {
+  if (px < 0 || py < 0 || px >= W || py >= H) return false;
+  for (let i = 0; i < TREE_CANOPIES.length; i++) {
+    const cx = TREE_CANOPIES[i][0], cy = TREE_CANOPIES[i][1], lim = TREE_CANOPIES[i][2] - 3, ox = px - cx, oy = py - cy;
+    if (ox * ox + oy * oy <= lim * lim) return true;
+  }
+  return false;
+}
+const TREE_LEAVES = [];
+for (let i = 0; i < 20; i++) for (let j = 0; j < 8; j++) {
+  const n = (3 * i + 5 * j) % 7; if (n > 1) continue;
+  const x = 8 + 12 * i, y = 8 + 10 * j, pts = n ? TREE_LEAF_SHADE : TREE_LEAF_LIGHT, col = n ? '#214c30' : '#397548';
+  if (!pts.every(([dx, dy]) => treeLeafInside(x + dx, y + dy))) continue;
+  for (let p = 0; p < pts.length; p++) TREE_LEAVES.push(x + pts[p][0], y + pts[p][1], col);
+}
+
 // per-stage original scenery: tree branches, rooftops, loading docks, park grass
 function drawPlat(c, pl, th, t, ti = 0, theme = 'tree') {
   const x = Math.round(pl.x1), w = Math.round(pl.x2 - pl.x1), y = Math.round(pl.y1);
   if (theme === 'tree') {
-    R(c, x, y, w, 5, '#7a4a22'); R(c, x, y, w, 1, '#a8703a'); R(c, x, y + 4, w, 1, '#4a2a12');
-    for (let i = 4; i < w - 2; i += 13) { R(c, x + i, y - 2, 4, 2, '#3aa04a'); R(c, x + i + 1, y - 3, 2, 1, '#6ad06a'); }
+    R(c, x, y, w, 5, '#87552f'); R(c, x, y, w, 1, '#c29254'); R(c, x, y + 4, w, 1, '#4a3122');
+    for (let i = 7; i < w - 3; i += 19) R(c, x + i, y + 2, Math.min(3, w - 1 - i), 1, '#9b6a3c');
+    for (let i = 15; i < w - 2; i += 23) R(c, x + i, y + 3, Math.min(2, w - 1 - i), 1, '#70462c');
+    for (let i = 4; i < w - 2; i += 13) { R(c, x + i, y - 2, 4, 2, '#3d8745'); R(c, x + i + 1, y - 3, 2, 1, '#75ad58'); }
   } else if (theme === 'roof') {
     if (ti === 'body') { R(c, x, y + 4, w, H - y, '#2a2238'); for (let yy = y + 10; yy < H; yy += 14) for (let xx = x + 4; xx < x + w - 6; xx += 12) R(c, xx, yy, 5, 6, (xx * 7 + yy) % 5 ? '#141020' : '#f0c860'); return; }
     R(c, x, y, w, 4, '#8a7a90'); R(c, x, y, w, 1, '#c8b8d0'); R(c, x - 1, y + 3, w + 2, 1, '#4a3a58');
@@ -32,10 +53,18 @@ function drawBackdrop(c, g, t) {
   const sky = { tree: ['#1a2a4a', '#3a5a6a'], roof: ['#0c0c1e', '#1a1a3a'], truck: ['#140c24', '#3a1a3a'], park: ['#2a3a6a', '#e08a5a'] }[th];
   const gr = c.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, sky[0]); gr.addColorStop(1, sky[1]); c.fillStyle = gr; c.fillRect(0, 0, W, H);
   for (let i = 0; i < 24; i++) R(c, (i * 97) % W, 20 + (i * 53) % 90, 1, 1, '#ffffff44');
-  if (th === 'tree') { R(c, 116, 40, 24, H, '#5a3418'); R(c, 120, 40, 3, H, '#7a4a22'); R(c, 132, 60, 2, H, '#3a2010');
-    c.fillStyle = '#1e5a2a'; for (const [x, y, r] of [[128, 30, 46], [60, 40, 26], [200, 44, 28]]) { c.beginPath(); c.arc(x, y, r, 0, 7); c.fill(); }
+  if (th === 'tree') {
+    R(c, 116, 40, 24, H, '#61432f'); R(c, 120, 40, 3, H, '#8c6240'); R(c, 132, 60, 2, H, '#3d2e23');
+    for (let k = 0; k < 10; k++) R(c, 117 + (7 * k) % 20, 82 + 17 * k, 1, 4, '#765438');
+    c.fillStyle = '#285d37'; for (const [cx, cy, r] of TREE_CANOPIES) { c.beginPath(); c.arc(cx, cy, r, 0, 7); c.fill(); }
+    for (let i = 0; i < TREE_LEAVES.length; i += 3) R(c, TREE_LEAVES[i], TREE_LEAVES[i + 1], 1, 1, TREE_LEAVES[i + 2]);
     // treehouse hut round the top deck
-    R(c, 74, 24, 108, 28, '#8a5a2a'); R(c, 70, 20, 116, 5, '#a83a2a'); R(c, 120, 30, 14, 10, '#f0d080'); }
+    R(c, 74, 24, 108, 28, '#91683f');
+    for (let sx = 80; sx <= 176; sx += 12) R(c, sx, 26, 1, 24, '#7b5436');
+    for (let k = 0; k < 4; k++) R(c, 83 + (17 * k) % 85, 28 + 7 * k, 3, 1, '#9c744a');
+    R(c, 70, 20, 116, 5, '#8e4935'); R(c, 70, 20, 116, 1, '#b97848'); R(c, 70, 24, 116, 1, '#643c2e');
+    R(c, 120, 30, 14, 10, '#efd7a0'); R(c, 121, 31, 12, 8, '#f5e5b9');
+    R(c, 120, 39, 14, 1, '#b2864f'); R(c, 133, 30, 1, 10, '#b2864f'); R(c, 127, 31, 1, 8, '#b2864f'); }
   if (th === 'truck') { R(c, 0, 226, W, 14, '#22222a'); for (let x = (-t * 40) % 24; x < W; x += 24) R(c, x, 232, 12, 2, '#f0f0f0');
     for (let i = 0; i < 6; i++) R(c, 10 + i * 44, 30, 30, 70, '#24183a'); }
   if (th === 'park') { R(c, 92, 224, 72, 16, '#2a6ab0'); for (let i = 0; i < 6; i++) R(c, 96 + ((i * 13 + Math.floor(t * 6)) % 64), 228 + (i % 3) * 3, 5, 1, '#8ac8f0');
@@ -115,10 +144,11 @@ export function drawGame(c, g, opts = {}) {
   if (theme === 'roof') for (const pl of [...g.plats].sort((a, b) => a.y1 - b.y1)) drawPlat(c, pl, th, t, 'body', theme);
   if (amb) drawMid(c, amb);
   for (const pl of g.plats) drawPlat(c, pl, th, t, 0, theme);
-  // rope ladders (original: knotted rope, not steel)
+  // rope ladders (original: knotted rope, not steel). Warm rope on the treehouse only.
   for (const L of g.S.ladders) { const e = ladderEnds(g, L);
-    R(c, L.x - 4, e.top, 1, e.bot - e.top, '#d8c08a'); R(c, L.x + 3, e.top, 1, e.bot - e.top, '#d8c08a');
-    for (let y = e.top + 4; y < e.bot; y += 5) { R(c, L.x - 4, y, 8, 1, '#a8703a'); R(c, L.x - 4, y - 1, 1, 1, '#fff6'); } }
+    const rope = theme === 'tree' ? '#d8bd83' : '#d8c08a', rung = theme === 'tree' ? '#b98a50' : '#a8703a', knot = theme === 'tree' ? '#f4e4ba' : '#fff6';
+    R(c, L.x - 4, e.top, 1, e.bot - e.top, rope); R(c, L.x + 3, e.top, 1, e.bot - e.top, rope);
+    for (let y = e.top + 4; y < e.bot; y += 5) { R(c, L.x - 4, y, 8, 1, rung); R(c, L.x - 4, y - 1, 1, 1, knot); } }
   for (const l of g.lifts) drawLift(c, l, t);
   if (g.S.perches.some(q => q.p === undefined)) { /* park: cat walks the high branch drawn in the backdrop */ }
   for (const h of g.hammers) if (!h.taken && !frame(c, 'bone', 0, 8, 8, h.x - 4, h.y)) drawSprite(c, SPR.bone, h.x - 4, h.y);
